@@ -1,18 +1,20 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
-int ledPin = 21;
 
+int pins[]={0,1,2,4,5,12,13,14,19,18,17,16,15,26,27,25,23,22,21,32,33};
 // Replace with your network credentials
 const char* ssid = "RobotX club";
 const char* password = "robotx2022";
 
 // URL of the JSON data
-const char* url = "http://192.168.56.1:1000/";
+const char* url = "https://smart-home-1.onrender.com/";
 
 void setup() {
   Serial.begin(115200);
-
+  for(int i=0;i<21;i++){
+     pinMode(pins[i], OUTPUT);
+  }
   // Connect to Wi-Fi
   WiFi.begin(ssid, password);
   Serial.print("Connecting to WiFi...");
@@ -46,14 +48,20 @@ void loop() {
         Serial.println(error.f_str());
         return;
       }
-
       // Accessing JSON data
       // Assuming the JSON structure is known
-      const char* exampleValue = doc["ledState"];
+      bool exampleValue = doc["ledState"];
       Serial.println("ledState: " + String(exampleValue));
       
-      // Add your JSON processing logic here
-
+      if (exampleValue == 0) {
+          for(int i=0;i<21;i++){
+     digitalWrite(pins[i],LOW);
+  }
+      } else if (exampleValue==1){
+  for(int i=0;i<21;i++){
+     digitalWrite(pins[i],HIGH);
+  }
+      }
     } else {
       Serial.println("Error on HTTP request");
     }
