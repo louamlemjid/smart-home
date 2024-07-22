@@ -41,6 +41,9 @@ db.once('open', async function(){
             console.log(devices);
             res.json({ ledState: devices[0].state });
         });
+        app.get('/louam/ac10000', async(req, res) => {
+            res.json({ ledState: true });
+        });
     } catch (error) {
         console.error(error);
     }

@@ -1,72 +1,131 @@
 #include <WiFi.h>
+#include <WebServer.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 
-int pins[]={0,1,2,4,5,12,13,14,19,18,17,16,15,26,27,25,23,22,21,32,33};
 // Replace with your network credentials
-const char* ssid = "RobotX club";
-const char* password = "robotx2022";
+const char *ssid = "Arduino-AP";
+const char *password = "12345678";
 
-// URL of the JSON data
-const char* url = "https://smart-home-1.onrender.com/";
+WebServer server(80);
+String userName;
+const char *deviceName = "ac10000";
 
-void setup() {
-  Serial.begin(115200);
-  for(int i=0;i<21;i++){
-     pinMode(pins[i], OUTPUT);
-  }
-  // Connect to Wi-Fi
-  WiFi.begin(ssid, password);
-  Serial.print("Connecting to WiFi...");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.print(".");
-  }
-  Serial.println(" connected.");
-  
+void handleRoot() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.send(200, "text/html", "Configure WiFi using /config?ssid=your_ssid&password=your_password&userName=your_userName");
 }
 
-void loop() {
-    // Fetch JSON data from the URL
-  if (WiFi.status() == WL_CONNECTED) {
+void handleConfig() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  if (server.hasArg("ssid") && server.hasArg("password") && server.hasArg("userName")) {
+    String newSSID = server.arg("ssid");
+    String newPassword = server.arg("password");
+    userName = server.arg("userName");
+
+    // Save the new WiFi credentials and user name
+    WiFi.begin(newSSID.c_str(), newPassword.c_str());
+
+    // Wait for connection
+    int retries = 0;
+    while (WiFi.status() != WL_CONNECTED && retries < 20) {
+      delay(500);
+      retries++;
+      Serial.print(".");
+    }
+
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("Connected to WiFi!");
+      Serial.print("User Name: ");
+      Serial.println(userName);
+      Serial.print("Device Name: ");
+      Serial.println(deviceName);
+
+      // Prepare JSON response
+      StaticJsonDocument<200> doc;
+      doc["message"] = "Connected to WiFi";
+      doc["deviceName"] = deviceName;
+
+      String response;
+      serializeJson(doc, response);
+
+      server.send(200, "application/json", response);
+    } else {
+      Serial.println("Failed to connect to WiFi");
+      server.send(200, "text/html", "Failed to connect to WiFi");
+    }
+  } else {
+    server.send(200, "text/html", "Configure WiFi using /config?ssid=your_ssid&password=your_password&userName=your_userName");
+  }
+}
+
+void handleNotFound() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.send(404, "text/plain", "Not Found");
+}
+
+void fetchJson() {
+  if ((WiFi.status() == WL_CONNECTED)) { // Check the current connection status
     HTTPClient http;
-    http.begin(url);
-    int httpResponseCode = http.GET();
+    String url = "https://smart-house.render.com/" + userName + "/" + deviceName;
+    http.begin(url); // Specify the URL
+    int httpCode = http.GET(); // Make the request
 
-    if (httpResponseCode > 0) {
+    if (httpCode > 0) { // Check for the returning code
       String payload = http.getString();
-      Serial.println("HTTP Response code: " + String(httpResponseCode));
-      Serial.println("JSON Payload: " + payload);
+      Serial.println(payload);
 
-      // Allocate a JsonDocument to hold the parsed JSON
-      StaticJsonDocument<1024> doc;
-
-      // Parse JSON payload
+      // Parse the JSON
+      StaticJsonDocument<200> doc;
       DeserializationError error = deserializeJson(doc, payload);
+
       if (error) {
-        Serial.print("deserializeJson() failed: ");
+        Serial.print(F("deserializeJson() failed: "));
         Serial.println(error.f_str());
         return;
       }
-      // Accessing JSON data
-      // Assuming the JSON structure is known
-      bool exampleValue = doc["ledState"];
-      Serial.println("ledState: " + String(exampleValue));
-      
-      if (exampleValue == 0) {
-          for(int i=0;i<21;i++){
-     digitalWrite(pins[i],LOW);
-  }
-      } else if (exampleValue==1){
-  for(int i=0;i<21;i++){
-     digitalWrite(pins[i],HIGH);
-  }
-      }
+
+      bool ledState = doc["ledState"]; // Access the key ledState
+      Serial.print("ledState: ");
+      Serial.println(ledState ? "true" : "false");
     } else {
       Serial.println("Error on HTTP request");
     }
-    http.end(); // Free resources
-  } else {
-    Serial.println("WiFi not connected");
+    http.end(); // Free the resources
   }
+}
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println();
+
+  // Set the Arduino as an access point
+  WiFi.softAP(ssid, password);
+
+  IPAddress IP = WiFi.softAPIP();
+  Serial.print("AP IP address: ");
+  Serial.println(IP);
+
+  // Define the web server routes
+  server.on("/", handleRoot);
+  server.on("/config", handleConfig);
+
+  // Handle CORS preflight requests
+  server.on("/config", HTTP_OPTIONS, []() {
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.sendHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+    server.send(204);
+  });
+
+  // Handle not found
+  server.onNotFound(handleNotFound);
+
+  // Start the server
+  server.begin();
+  Serial.println("HTTP server started");
+}
+
+void loop() {
+  server.handleClient();
 }
