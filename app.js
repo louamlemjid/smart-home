@@ -22,7 +22,12 @@ const User=mongoose.model('User',userschema);
 
 // Middleware
 app.set('view engine','ejs');
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost:8081', 'https://smart-home-1.onrender.com/'], // Allow multiple origins
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  }));
+  
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 const db=mongoose.connection;
