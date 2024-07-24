@@ -24,7 +24,7 @@ const User=mongoose.model('User',userschema);
 app.set('view engine','ejs');
 app.use(cors({
     origin: ['http://localhost:8081', 'https://smart-home-1.onrender.com/*/*'], // Allow multiple origins
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS','PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization','Access-Control-Allow-Origin']
   }));
   
