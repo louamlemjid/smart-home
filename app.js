@@ -86,7 +86,7 @@ db.once('open', async function(){
         app.patch('/:user/:device', async (req, res) => {
             try {
             const changeState=await User.updateOne({name:req.params.user,'devices.name':req.params.device},
-                {$set:{'devices.$.state':req.body.state}});
+                {$set:{'devices.$.state':req.body.state}},{new:true});
             res.send(changeState);
             } catch (error) {
                 console.error(error);
