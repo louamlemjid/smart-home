@@ -67,7 +67,7 @@ void handleNotFound() {
 void fetchJson() {
   if ((WiFi.status() == WL_CONNECTED)) { // Check the current connection status
     HTTPClient http;
-    String url = "https://smart-house.render.com/" + userName + "/" + deviceName;
+    String url = "https://smart-home-1.onrender.com/" + userName + "/" + deviceName;
     http.begin(url); // Specify the URL
     int httpCode = http.GET(); // Make the request
 
@@ -128,4 +128,5 @@ void setup() {
 
 void loop() {
   server.handleClient();
+  fetchJson();
 }
