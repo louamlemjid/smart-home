@@ -47,32 +47,67 @@ db.once('open', async function(){
             console.log(devices);
             res.render('admin');
         })
-        app.get('/', async(req, res) => {
-            const devices = await Device.find({});
-            console.log(devices);
-            res.json({ ledState: devices[0].state });
+        app.get('/:user/devices', async(req, res) => {
+            try {
+                const devices = await User.findOne({name:req.params.user});
+                console.log(devices);
+                if (!devices) {
+                    return res.status(404).send('User not found');
+                }
+                res.json({ devices: devices.devices });
+            } catch (error) {
+                res.status(400).send(error);
+            }
         });
         // Create a new user
         app.post('/user', async (req, res) => {
             try {
             const user =await User.insertMany({ name: req.body.name, devices: [] });
-            res.status(201).send(user);
+            res.status(200).send(user);
             } catch (error) {
             res.status(400).send(error);
             }
         });
         
-        // Create a new device for a user
         app.post('/:user/device', async (req, res) => {
             try {
-            const device = await User.updateOne({ name: req.params.user },
-                {$push:{devices:{name:req.body.name,state:false}}});
-                console.log(device);
-            res.status(201).send(device);
+              const userName = req.params.user;
+              const deviceName = req.body.name;
+          
+              // Find the user
+                const user = await User.findOne({ name: userName, devices: { $elemMatch: { name: deviceName } } });
+                if(!user){
+                    const addDevice = await User.updateOne({ name: userName },
+                        { $push: { devices: { name: deviceName, state: false } } }
+                    );
+                    console.log(addDevice);
+                    res.status(200).send(addDevice);
+                }else{
+                    res.status(400).send('Device already exists');
+                }
+            
+            //   if (!user) {
+            //     return res.status(404).send('User not found');
+            //   }
+          
+            //   // Check if the device already exists
+            //   const deviceExists = user.devices.some(device => device.name === deviceName);
+          
+            //   if (deviceExists) {
+            //     return res.status(400).send('Device already exists');
+            //   }
+          
+            //   // Add the new device
+            //   user.devices.push({ name: deviceName, state: false });
+            //   await user.save();
+          
+            //   res.status(200).send(user);
             } catch (error) {
-            res.status(400).send(error);
+              res.status(400).send(error);
             }
-        });
+          });
+          
+          
         
         // Get JSON object for a device
         app.get('/:user/:device', async (req, res) => {
@@ -92,7 +127,8 @@ db.once('open', async function(){
             try {
             const changeState=await User.updateOne({name:req.params.user,'devices.name':req.params.device},
                 {$set:{'devices.$.state':req.body.state}},{new:true});
-            res.send(changeState);
+                console.log(changeState);
+            res.status(200).send(changeState);
             } catch (error) {
                 console.error(error);
                 res.status(400).send(error);
