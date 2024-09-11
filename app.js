@@ -155,7 +155,7 @@ db.once('open', async function(){
                 );
         
                 console.log(changeState);
-                res.status(200).send(changeState,req.body);
+                res.status(200).send(changeState,{ state, temperature, mode, duration, startTime, endTime });
         
             } catch (error) {
                 console.error(error);
