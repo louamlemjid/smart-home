@@ -149,7 +149,13 @@ db.once('open', async function(){
         
                 const changeState = await User.findOneAndUpdate(
                     { name: user, 'devices.name': device },
-                    { $set: { 'devices.$': updateData } },  // Update the matched device in the array
+                    { $set: { 'devices.$.temperature': temperature,
+                        'devices.$.mode':mode,
+                        'devices.$.state':state,
+                        'devices.$.duration':duration,
+                        'devices.$.startTime':startTime,
+                        'devices.$.endTime':endTime
+                    }},  // Update the matched device in the array
                     { new: true }
                 );
         
