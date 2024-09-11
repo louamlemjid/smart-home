@@ -27,7 +27,7 @@ const User=mongoose.model('User',userschema);
 
 // Middleware
 app.use(cors({
-    origin: ['http://localhost:8081'], // Allow your frontend and your deployed site
+    origin: ['http://localhost:8081', 'https://smart-home-v418.onrender.com'], // Allow your frontend and your deployed site
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Include PATCH if you're using it
     allowedHeaders: ['Content-Type', 'Authorization','Access-Control-Allow-Origin']
 }));
@@ -127,7 +127,7 @@ db.once('open', async function(){
             res.status(400).send(error);
             }
         });
-        app.post('/:user/:device', async (req, res) => {
+        app.patch('/:user/:device', async (req, res) => {
             try {
                 const { device, user } = req.params;
                 const { state, temperature, mode, duration, startTime, endTime } = req.body;
