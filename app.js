@@ -26,12 +26,11 @@ const userschema= new mongoose.Schema({
 const User=mongoose.model('User',userschema);
 
 // Middleware
-app.use(cors());
-/*{
-    origin: ['http://localhost:8081', 'https://smart-home-v418.onrender.com', 'http://localhost:1000'], // Correct origins
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+app.use(cors({
+    origin: ['http://localhost:8081', 'https://smart-home-v418.onrender.com'], // Allow your frontend and your deployed site
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Include PATCH if you're using it
     allowedHeaders: ['Content-Type', 'Authorization']
-} */
+}));
 // Body parsing middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
