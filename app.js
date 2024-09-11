@@ -130,6 +130,7 @@ db.once('open', async function(){
         });
         app.patch('/:user/:device', async (req, res) => {
             try {
+                console.log(req.body.temperature,req.body.mode)
                 const updateData = {
                     name:req.params.device,
                     state: req.body.state,
