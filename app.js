@@ -26,12 +26,12 @@ const userschema= new mongoose.Schema({
 const User=mongoose.model('User',userschema);
 
 // Middleware
-app.use(cors({
+app.use(cors());
+/*{
     origin: ['http://localhost:8081', 'https://smart-home-v418.onrender.com', 'http://localhost:1000'], // Correct origins
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
+} */
 // Body parsing middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -155,7 +155,7 @@ db.once('open', async function(){
                 );
         
                 console.log(changeState);
-                res.status(200).send(changeState,{ state, temperature, mode, duration, startTime, endTime });
+                res.status(200).send(changeState,"patch route");
         
             } catch (error) {
                 console.error(error);
