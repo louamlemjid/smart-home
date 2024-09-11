@@ -131,12 +131,23 @@ db.once('open', async function(){
         app.patch('/:user/:device', async (req, res) => {
             try {
                 console.log(req.body.temperature,req.body.mode)
-                const updateData = {
-                    name:req.params.device,
+                let updateData={}
+                if(req.params.device.startsWith('ac')){
+                    updateData=
+                    {name:req.params.device,
                     state: req.body.state,
-                    ...(req.params.device.startsWith('ac') && { temperature: req.body.temperature, mode: req.body.mode }),
-                    ...(req.params.device.startsWith('hv') && { duration: req.body.duration, startTime: req.body.startTime, endTime: req.body.endTime }),
-                };
+                    temperature: req.body.temperature, 
+                    mode: req.body.mode}
+                }else if(req.params.device.startsWith('hv')){
+                    updateData = {
+                        name:req.params.device,
+                        state: req.body.state,
+                        duration: req.body.duration, 
+                        startTime: req.body.startTime, 
+                        endTime: req.body.endTime ,
+                    };
+                }
+                
         
                 const changeState = await User.updateOne(
                     { name: req.params.user, 'devices.name': req.params.device },
