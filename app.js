@@ -130,47 +130,39 @@ db.once('open', async function(){
         });
         app.patch('/:user/:device', async (req, res) => {
             try {
-                console.log(req.body.temperature,req.body.mode)
-                let updateData={}
-                if(req.params.device.startsWith('ac')){
-                    const changeState = await User.updateOne(
-                        { name: req.params.user, 'devices.name': req.params.device },
-                        { $set: { 'devices.$': {name:req.params.device,
-                            state: req.body.state,
-                            temperature: req.body.temperature, 
-                            mode: req.body.mode} } }, // Update the entire device object with updateData
-                        { new: true }
-                    );
-            
-                    console.log(changeState);
-                    res.status(200).send(changeState);
-                    
-                    
-                }else if(req.params.device.startsWith('hv')){
-                    const changeState = await User.updateOne(
-                        { name: req.params.user, 'devices.name': req.params.device },
-                        { $set: { 'devices.$': {
-                            name:req.params.device,
-                            state: req.body.state,
-                            duration: req.body.duration, 
-                            startTime: req.body.startTime, 
-                            endTime: req.body.endTime ,
-                        } } }, // Update the entire device object with updateData
-                        { new: true }
-                    );
-            
-                    console.log(changeState);
-                    res.status(200).send(changeState);
-                    
-                }
+                const { device, user } = req.params;
+                const { state, temperature, mode, duration, startTime, endTime } = req.body;
                 
+                let updateData = {
+                    name: device,
+                    state: state,
+                };
         
-                
+                // Conditionally add fields based on device type
+                if (device.startsWith('ac')) {
+                    updateData.temperature = temperature;
+                    updateData.mode = mode;
+                } else if (device.startsWith('hv')) {
+                    updateData.duration = duration;
+                    updateData.startTime = startTime;
+                    updateData.endTime = endTime;
+                }
+        
+                const changeState = await User.updateOne(
+                    { name: user, 'devices.name': device },
+                    { $set: { 'devices.$': updateData } },  // Update the matched device in the array
+                    { new: true }
+                );
+        
+                console.log(changeState);
+                res.status(200).send(changeState);
+        
             } catch (error) {
                 console.error(error);
                 res.status(400).send(error);
             }
         });
+        
         
 
         app.get('/louam/ac10000', async(req, res) => {
