@@ -127,7 +127,7 @@ db.once('open', async function(){
             res.status(400).send(error);
             }
         });
-        app.patch('/:user/:device', async (req, res) => {
+        app.post('/:user/:device', async (req, res) => {
             try {
                 const { device, user } = req.params;
                 const { state, temperature, mode, duration, startTime, endTime } = req.body;
