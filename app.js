@@ -155,7 +155,7 @@ db.once('open', async function(){
                 );
         
                 console.log(changeState);
-                res.status(200).send(changeState);
+                res.status(200).send(changeState,req.body);
         
             } catch (error) {
                 console.error(error);
