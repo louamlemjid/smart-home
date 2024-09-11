@@ -26,15 +26,15 @@ const userschema= new mongoose.Schema({
 const User=mongoose.model('User',userschema);
 
 // Middleware
-app.set('view engine','ejs');
 app.use(cors({
-    origin: ['http://localhost:8081', 'https://smart-home-1.onrender.com/*/*'], // Allow multiple origins
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS','PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization','Access-Control-Allow-Origin']
-  }));
-  
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+    origin: ['http://localhost:8081', 'https://smart-home-v418.onrender.com', 'http://localhost:1000'], // Correct origins
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Body parsing middleware
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 const db=mongoose.connection;
 db.on('error',console.error.bind(console,'connection error:'));
 db.once('open', async function(){
