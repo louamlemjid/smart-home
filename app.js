@@ -14,7 +14,12 @@ const userschema= new mongoose.Schema({
     devices:[
         {
             name:String,
-            state:Boolean
+            state:Boolean,
+            temperature:Number,
+            mode:String,
+            startTime:Date,
+            endTime:Date,
+            duration:Number
         }
     ]
 });
@@ -125,15 +130,27 @@ db.once('open', async function(){
         });
         app.patch('/:user/:device', async (req, res) => {
             try {
-            const changeState=await User.updateOne({name:req.params.user,'devices.name':req.params.device},
-                {$set:{'devices.$.state':req.body.state}},{new:true});
+                const updateData = {
+                    name:req.params.device,
+                    state: req.body.state,
+                    ...(req.params.device.startsWith('ac') && { temperature: req.body.temperature, mode: req.body.mode }),
+                    ...(req.params.device.startsWith('hv') && { duration: req.body.duration, startTime: req.body.startTime, endTime: req.body.endTime }),
+                };
+        
+                const changeState = await User.updateOne(
+                    { name: req.params.user, 'devices.name': req.params.device },
+                    { $set: { 'devices.$': updateData } }, // Update the entire device object with updateData
+                    { new: true }
+                );
+        
                 console.log(changeState);
-            res.status(200).send(changeState);
+                res.status(200).send(changeState);
             } catch (error) {
                 console.error(error);
                 res.status(400).send(error);
             }
-        })
+        });
+        
 
         app.get('/louam/ac10000', async(req, res) => {
             res.json({ ledState: true });

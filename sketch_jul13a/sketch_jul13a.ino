@@ -11,6 +11,11 @@ WebServer server(80);
 String userName;
 const char *deviceName = "ac10000";
 
+// JSON object fields
+bool deviceState;
+int deviceTemperature;
+String deviceMode;
+
 void handleRoot() {
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.send(200, "text/html", "Configure WiFi using /config?ssid=your_ssid&password=your_password&userName=your_userName");
@@ -76,7 +81,7 @@ void fetchJson() {
       Serial.println(payload);
 
       // Parse the JSON
-      StaticJsonDocument<200> doc;
+      StaticJsonDocument<500> doc;
       DeserializationError error = deserializeJson(doc, payload);
 
       if (error) {
@@ -85,9 +90,21 @@ void fetchJson() {
         return;
       }
 
-      bool ledState = doc["ledState"]; // Access the key ledState
-      Serial.print("ledState: ");
-      Serial.println(ledState ? "true" : "false");
+      // Extract temperature, mode, and state
+      deviceState = doc["state"];             // Boolean: Device state
+      deviceTemperature = doc["temperature"]; // Integer: Device temperature
+      deviceMode = doc["mode"].as<String>();  // String: Device mode
+
+      // Print the values to the Serial Monitor
+      Serial.print("Device State: ");
+      Serial.println(deviceState ? "On" : "Off");
+
+      Serial.print("Temperature: ");
+      Serial.println(deviceTemperature);
+
+      Serial.print("Mode: ");
+      Serial.println(deviceMode);
+
     } else {
       Serial.println("Error on HTTP request");
     }
@@ -128,5 +145,5 @@ void setup() {
 
 void loop() {
   server.handleClient();
-  fetchJson();
+  fetchJson(); // Fetch JSON from the server periodically
 }
