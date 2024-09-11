@@ -148,14 +148,14 @@ db.once('open', async function(){
                     updateData.endTime = endTime;
                 }
         
-                const changeState = await User.updateOne(
+                const changeState = await User.findOneAndUpdate(
                     { name: user, 'devices.name': device },
                     { $set: { 'devices.$': updateData } },  // Update the matched device in the array
                     { new: true }
                 );
         
                 console.log(changeState);
-                res.status(200).send(changeState,"patch route");
+                res.status(200).send(changeState);
         
             } catch (error) {
                 console.error(error);
