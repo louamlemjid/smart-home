@@ -19,7 +19,8 @@ const userschema= new mongoose.Schema({
             mode:String,
             startTime:Date,
             endTime:Date,
-            duration:Number
+            duration:Number,
+            waterLevel:Number
         }
     ]
 });
@@ -130,7 +131,7 @@ db.once('open', async function(){
         app.patch('/:user/:device', async (req, res) => {
             try {
                 const { device, user } = req.params;
-                const { state, temperature, mode, duration, startTime, endTime } = req.body;
+                const { state, temperature, mode, duration, startTime, endTime,waterLevel } = req.body;
                 
                 let updateData = {
                     name: device,
@@ -145,17 +146,13 @@ db.once('open', async function(){
                     updateData.duration = duration;
                     updateData.startTime = startTime;
                     updateData.endTime = endTime;
+                }else if(device.startsWith('wl')){
+                    updateData.waterLevel=waterLevel
                 }
         
                 const changeState = await User.findOneAndUpdate(
                     { name: user, 'devices.name': device },
-                    { $set: { 'devices.$.temperature': temperature,
-                        'devices.$.mode':mode,
-                        'devices.$.state':state,
-                        'devices.$.duration':duration,
-                        'devices.$.startTime':startTime,
-                        'devices.$.endTime':endTime
-                    }},  // Update the matched device in the array
+                    { $set: { 'devices.$': updateData}},  // Update the matched device in the array
                     { new: true }
                 );
         
