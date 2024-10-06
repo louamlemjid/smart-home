@@ -7,7 +7,7 @@ const app = express();
 const PORT = 1000;
 const cron = require('node-cron');
 const WebSocket = require('ws');
-const wss = new WebSocket.Server({ port: 8080 });
+const wss = new WebSocket.Server({ port: 8080 || process.env.PORT });
 const {User,RemoteControl,Ac} =require('./db');
 let activeJobs = {};
 const addNewAc = require('./controllers/crudAc/addNewAc');
@@ -357,6 +357,6 @@ db.once('open', async function(){
 
 
 // Start the server
-app.listen(PORT, () => {
+app.listen(PORT || process.env.PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
