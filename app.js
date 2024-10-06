@@ -76,10 +76,11 @@ db.once('open', async function(){
         // Routes
 
         // Create WebSocket server on port 8080
-        app.patch(':user/ac/microcontroller', async(req, res) => {
+        app.patch('/:user/ac/microcontroller', async(req, res) => {
             try {
                 const {user}=req.params;
                 const {hexadecimalCode}=req.body;
+                console.log(user,hexadecimalCode);
                 console.log(user,hexadecimalCode);
                 const postCode=await User.updateOne({name:user},{$set:{postedHexadecimalCode:hexadecimalCode}});
                 console.log(postCode);
@@ -126,7 +127,7 @@ db.once('open', async function(){
                 if (data.operationType === 'update') {
                     const updatedUser = data.updateDescription.updatedFields;
                     console.log(updatedUser);
-                    // ws.send(JSON.stringify(updatedUser));
+                    ws.send(Object.values(updatedUser)[0])
                 }else if(data.operationType === 'insert'){
                     const newUser = data.fullDocument;
                     console.log(newUser);
