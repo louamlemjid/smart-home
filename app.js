@@ -5,30 +5,54 @@ const mongoose=require('mongoose');
 const { name } = require('ejs');
 const app = express();
 const PORT = 1000;
-
+const cron = require('node-cron');
+const WebSocket = require('ws');
+const wss = new WebSocket.Server({ port: 8080 });
+const {User,RemoteControl,Ac} =require('./db');
+let activeJobs = {};
+const addNewAc = require('./controllers/crudAc/addNewAc');
+const updateAc = require('./controllers/crudAc/updateAc');
+// Helper function to convert minutes to cron syntax
+function convertMinutesToCron(minutes) {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${mins} ${hours} * * *`; // Cron syntax for minute and hour
+}
+//hexadecial to signal converter
+function hexToSignla(hex,startBurst=8700,space=4100,afterSpace=530,oneBurst=1560,zeroBurst=550,neutral=470){
+    console.log(hex);
+    let signalList=[startBurst,space,afterSpace];
+    let binaryString = parseInt(hex,16).toString(2)
+    console.log(binaryString);
+    for (let i=0;i<binaryString.length;i++){
+        if(binaryString[i]=='1'){
+            signalList.push(oneBurst,neutral);
+        }else{
+            signalList.push(zeroBurst,neutral);
+        }
+    }
+    return signalList;
+}
+// Helper function to update the state of the device in the database
+async function updateDeviceState(user, device, newState) {
+    try {
+        await User.findOneAndUpdate(
+            { name: user, 'devices.name': device },
+            { $set: { 'devices.$.state': newState } },  // Update the matched device's state
+            { new: true }
+        );
+        console.log(`Device ${device} turned ${newState}`);
+    } catch (error) {
+        console.error(`Failed to update device state: ${error}`);
+    }
+}
 mongoose.connect('mongodb+srv://louam-lemjid:8hAgfKf2ZDauLxoj@cluster0.mjqmopn.mongodb.net/smartHome', { useNewUrlParser: true, useUnifiedTopology: true });
 
-// Models
-const userschema= new mongoose.Schema({
-    name:String,
-    devices:[
-        {
-            name:String,
-            state:Boolean,
-            temperature:Number,
-            mode:String,
-            startTime:Date,
-            endTime:Date,
-            duration:Number,
-            waterLevel:Number
-        }
-    ]
-});
-const User=mongoose.model('User',userschema);
+
 
 // Middleware
 app.use(cors({
-    origin: ['http://localhost:8081', 'https://smart-home-v418.onrender.com'], // Allow your frontend and your deployed site
+    origin: ['http://localhost:8081', 'https://smart-home-v418.onrender.com','http://192.168.1.104:8080'], // Allow your frontend and your deployed site
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Include PATCH if you're using it
     allowedHeaders: ['Content-Type', 'Authorization','Access-Control-Allow-Origin']
 }));
@@ -40,12 +64,107 @@ db.on('error',console.error.bind(console,'connection error:'));
 db.once('open', async function(){
     console.log('connected to the database');
     try {
+        
+        // let addedAc=await addNewAc('LG');
+        // console.log(addedAc);
+        // let updatedAc=await updateAc('LG','cool','auto','8808754',22);
+        // console.log(updatedAc);
+        // const newAc= await RemoteControl.insertMany({name:'LG',
+            // cool:{
+                // autoFan:{"16":"none","17":"none","18":"0x8808350","19":"0x8808451","20":"8808552","21":"8808653","22":"8808754","23":"8808855","24":"8808956","25":"8808A57","26":"8808B58","27":"8808C59","28":"8808D5A","29":"8808E5B","30":"8808F5C"}}
+                // ,heat:{autoFan:{"low":"880B454","medium":"880B252","high":"880B050"}},fan:{"low":"880A30D","medium":"880A32F","high":"880A341"},dry:{autoFan:"8809856"}});
         // Routes
+
+        // Create WebSocket server on port 8080
+        app.patch(':user/ac/microcontroller', async(req, res) => {
+            try {
+                const {user}=req.params;
+                const {hexadecimalCode}=req.body;
+                console.log(user,hexadecimalCode);
+                const postCode=await User.updateOne({name:user},{$set:{postedHexadecimalCode:hexadecimalCode}});
+                console.log(postCode);
+                res.status(200).send(postCode);
+            } catch (error) {
+                res.status(400).send(error);
+                
+            }
+        });
+        wss.on('connection', (ws) => {
+            console.log('Client connected');
+
+            // Send message to the client
+            ws.send('Welcome to the WebSocket server!');
+
+            // Receive message from the client
+            ws.on('message', (message) => {
+                console.log(`Received: ${message}`);
+                const data = JSON.parse(message);
+                console.log("data.type : ",data.type);
+                console.log("data : ",data);
+                ws.send(`Server received: ${message}`);
+                // You can broadcast a message to all connected clients
+                // wss.clients.forEach((client) => {
+                //     if (client.readyState === WebSocket.OPEN) {
+                //         client.send(`Server received: ${message}`);
+                //     }
+                // });
+            });
+            Ac.watch().on('change', (data) => {
+                console.log('Change detected:', data);
+                if (data.operationType === 'update') {
+                    const updatedAc = data.updateDescription.updatedFields;
+                    console.log(updatedAc);
+                    // ws.send(JSON.stringify(updatedAc));
+                }else if(data.operationType === 'insert'){
+                    const newAc = data.fullDocument;
+                    console.log(newAc);
+                    // ws.send(JSON.stringify(newAc));
+                }
+            });
+            User.watch().on('change', (data) => {
+                console.log('Change detected:', data);
+                if (data.operationType === 'update') {
+                    const updatedUser = data.updateDescription.updatedFields;
+                    console.log(updatedUser);
+                    // ws.send(JSON.stringify(updatedUser));
+                }else if(data.operationType === 'insert'){
+                    const newUser = data.fullDocument;
+                    console.log(newUser);
+                    // ws.send(JSON.stringify(newUser));
+                }
+            });
+            // Handle disconnection
+            ws.on('close', () => {
+                console.log('Client disconnected');
+            });
+        });
+        app.patch('/ac', async(req, res) => {
+            try {
+                const { acName,mode, fanSpeed, temperature, heatLevel, hexadecimalCode } = req.body;
+                console.log(acName,mode, fanSpeed, temperature, heatLevel, hexadecimalCode);
+                const updatedAc = await updateAc(acName, mode, fanSpeed, hexadecimalCode, temperature, heatLevel);
+                res.status(200).send(updatedAc);
+                console.log(updatedAc);
+            } catch (error) {
+                res.status(400).send(error);
+            }
+        });
         app.post('/admin', async(req, res) => {
             const state=req.body.switch;
             console.log(state);
             // const chageState=await Device.updateOne({name:'led'},{$set:{state:state=="on"?true:false}});
             res.redirect('/admin');
+        })
+        app.get('/', async(req, res) => {
+            try {
+                // const acs=await RemoteControl.findOne({name:'LG'},{"cool.autoFan.24":1,_id:0});
+                const acs=await Ac.findOne({name:'LG'});
+                // console.log(hexToSignla(acs.cool.autoFan['24']));
+                res.json(acs);
+            } catch (error) {
+                res.status(400).send(error);
+                
+            }
         })
         app.get('/admin', async(req, res) => {
             // const devices = await Device.find({});
@@ -131,8 +250,11 @@ db.once('open', async function(){
         app.patch('/:user/:device', async (req, res) => {
             try {
                 const { device, user } = req.params;
-                const { state, temperature, mode, duration, startTime, endTime,waterLevel } = req.body;
-                
+                const { state, temperature, mode, duration, startTime, endTime, waterLevel } = req.body;
+                let AmplifiedDuration=duration*2;
+                if(AmplifiedDuration==60){
+                    AmplifiedDuration=59;
+                }
                 let updateData = {
                     name: device,
                     state: state,
@@ -146,15 +268,73 @@ db.once('open', async function(){
                     updateData.duration = duration;
                     updateData.startTime = startTime;
                     updateData.endTime = endTime;
-                }else if(device.startsWith('wl')){
-                    updateData.waterLevel=waterLevel
+                } else if (device.startsWith('wl')) {
+                    updateData.waterLevel = waterLevel;
                 }
         
+                // Update the device in the user's list of devices
                 const changeState = await User.findOneAndUpdate(
                     { name: user, 'devices.name': device },
-                    { $set: { 'devices.$': updateData}},  // Update the matched device in the array
+                    { $set: { 'devices.$': updateData } },  // Update the matched device in the array
                     { new: true }
                 );
+                if (activeJobs[device]) {
+                    activeJobs[device].forEach(job => job.stop());
+                }
+                function sequence(duration){
+                    let ch=""
+                    for (let i=duration;i<60;i+=duration*2){
+                        ch+=`${i},`
+                    }
+                    console.log(ch.slice(0,-1));
+                    return ch.slice(0,-1);
+                }
+                if (startTime && endTime && duration) {
+                    // Convert startTime and endTime to Date objects if they're not already
+                    const start = new Date(startTime);
+                    const end = new Date(endTime);
+        
+                    const xDuration = duration * 60 * 1000; // Convert duration from minutes to milliseconds
+        
+                    // Schedule the initial ON job at startTime
+                    let onJob = cron.schedule(`${start.getMinutes()} ${start.getHours()} * * *`, async () => {
+                        console.log(`Device ${device} initial ON at start time.`);
+                        await updateDeviceState(user, device, true); // Turn device ON
+        
+                        // Start setInterval to toggle the device ON and OFF for xDuration
+                        let toggleInterval = setInterval(async () => {
+                            await updateDeviceState(user, device, true); // Turn device ON
+                            console.log('Device turned ON');
+        
+                            // Turn device OFF after xDuration
+                            setTimeout(async () => {
+                                await updateDeviceState(user, device, false); // Turn device OFF
+                                console.log('Device turned OFF');
+                            }, xDuration);
+        
+                        }, xDuration * 2); // Run every xDuration * 2 (ON for xDuration, OFF for xDuration)
+        
+                        // Store the interval for cleanup later
+                        activeJobs[device].push({ interval: toggleInterval });
+        
+                    });
+        
+                    // Schedule the final OFF job at endTime
+                    let offJob = cron.schedule(`${end.getMinutes()} ${end.getHours()} * * *`, async () => {
+                        console.log(`Device ${device} OFF at end time.`);
+                        
+                        // Turn off device and clear interval
+                        await updateDeviceState(user, device, false); // Turn device OFF
+                        
+                        // Clear the interval to stop toggling
+                        if (activeJobs[device]) {
+                            activeJobs[device].forEach(job => clearInterval(job.interval));
+                        }
+                    });
+        
+                    // Store active cron jobs for the device
+                    activeJobs[device] = [{ cron: onJob }, { cron: offJob }];
+                }
         
                 console.log(changeState);
                 res.status(200).send(changeState);
