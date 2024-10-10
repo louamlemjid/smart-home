@@ -99,9 +99,9 @@ db.once('open', async function(){
             // Receive message from the client
             ws.on('message', (message) => {
                 console.log(`Received: ${message}`);
-                const data = JSON.parse(message);
-                console.log("data.type : ",data.type);
-                console.log("data : ",data);
+                // const data = JSON.parse(message);
+                // console.log("data.type : ",data.type);
+                // console.log("data : ",data);
                 ws.send(`Server received: ${message}`);
                 // You can broadcast a message to all connected clients
                 // wss.clients.forEach((client) => {
