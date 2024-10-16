@@ -12,6 +12,7 @@ const {User,RemoteControl,Ac} =require('./db');
 let activeJobs = {};
 const addNewAc = require('./controllers/crudAc/addNewAc');
 const updateAc = require('./controllers/crudAc/updateAc');
+const getAcNames=require('./controllers/crudAc/getAcNames')
 // Helper function to convert minutes to cron syntax
 function convertMinutesToCron(minutes) {
     const hours = Math.floor(minutes / 60);
@@ -90,12 +91,9 @@ db.once('open', async function(){
                 
             }
         });
-        wss.on('connection', (ws) => {
+        wss.on('connection', (ws,req) => {
             console.log('Client connected');
-
-            // Send message to the client
-            ws.send('Welcome to the WebSocket server!');
-
+            console.log(req.url)
             // Receive message from the client
             ws.on('message', (message) => {
                 console.log(`Received: ${message}`);
@@ -122,12 +120,23 @@ db.once('open', async function(){
                     // ws.send(JSON.stringify(newAc));
                 }
             });
-            User.watch().on('change', (data) => {
+            User.watch([
+                {
+                    $match: {
+                        "operationType": "update",
+                        "updateDescription.updatedFields.postedHexadecimalCode": { $exists: true }
+                    }
+                }
+            ]).on('change', (data) => {
                 console.log('Change detected:', data);
                 if (data.operationType === 'update') {
-                    const updatedUser = data.updateDescription.updatedFields;
-                    console.log(updatedUser);
-                    ws.send(Object.values(updatedUser)[0])
+                    const { documentKey, updateDescription } =data;
+                    const userId = documentKey._id;
+                    const updatedHexCode = updateDescription.updatedFields.postedHexadecimalCode;
+                    console.log("after update: ",userId,updatedHexCode)
+                    // const updatedUser = data.updateDescription.updatedFields;
+                    // console.log(updatedUser);
+                    // ws.send(Object.values(updatedUser)[0])
                 }else if(data.operationType === 'insert'){
                     const newUser = data.fullDocument;
                     console.log(newUser);
@@ -150,6 +159,16 @@ db.once('open', async function(){
                 res.status(400).send(error);
             }
         });
+        app.get('/ac',async(req,res)=>{
+            try {
+                console.log("ac list is colled")
+                let acNames=await getAcNames();
+                console.log("list of ac names:",acNames)
+                res.status(200).json({acList:acNames})
+            } catch (error) {
+                console.error(error);
+            }
+        })
         app.post('/admin', async(req, res) => {
             const state=req.body.switch;
             console.log(state);
