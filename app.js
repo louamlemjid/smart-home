@@ -10,6 +10,7 @@ const WebSocket = require('ws');
 const wss = new WebSocket.Server({ port: 8080 || process.env.PORT });
 const {User,RemoteControl,Ac} =require('./db');
 let activeJobs = {};
+let clients={}
 const addNewAc = require('./controllers/crudAc/addNewAc');
 const updateAc = require('./controllers/crudAc/updateAc');
 const getAcNames=require('./controllers/crudAc/getAcNames')
@@ -93,7 +94,14 @@ db.once('open', async function(){
         });
         wss.on('connection', (ws,req) => {
             console.log('Client connected');
-            console.log(req.url)
+            const url = new URL(req.url, 'http://localhost:8080');
+            // Get the value of userId from the query string
+            const userId = url.searchParams.get('userId');
+            console.log(userId);
+            if(userId){
+                clients[userId]=ws;
+                console.log(clients);
+            }
             // Receive message from the client
             ws.on('message', (message) => {
                 console.log(`Received: ${message}`);
@@ -122,6 +130,35 @@ db.once('open', async function(){
             });
             User.watch([
                 {
+                  $match: {
+                    "operationType": "update",
+                    // Match updates where only the waterLevel field in the devices array is updated
+                    $expr: {
+                      $anyElementTrue: {
+                        $map: {
+                          input: { $objectToArray: "$updateDescription.updatedFields" },
+                          as: "field",
+                          in: { $regexMatch: { input: "$$field.k", regex: /^devices\.\d+\.waterLevel$/ } }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]).on('change', async(change) => {
+                console.log("Change detected in waterLevel: ", change.updateDescription.updatedFields);
+                const { documentKey, updateDescription } = change;
+                const userId = documentKey._id.toHexString();
+                console.log("userId: ",userId);
+                const updatedWaterLevel = Object.values(updateDescription.updatedFields)[0]
+                if(clients[userId]){
+                    let updatedDevices=await User.findOne({_id:userId});
+                    clients[userId].send(JSON.stringify({"updatedWaterLevel":updatedWaterLevel,"updatedDevices":updatedDevices}));
+                }
+            });
+                
+              
+            User.watch([
+                {
                     $match: {
                         "operationType": "update",
                         "updateDescription.updatedFields.postedHexadecimalCode": { $exists: true }
@@ -129,19 +166,15 @@ db.once('open', async function(){
                 }
             ]).on('change', (data) => {
                 console.log('Change detected:', data);
-                if (data.operationType === 'update') {
                     const { documentKey, updateDescription } =data;
                     const userId = documentKey._id;
                     const updatedHexCode = updateDescription.updatedFields.postedHexadecimalCode;
+                    const waterLevel = updateDescription.updatedFields.waterLevel;
                     console.log("after update: ",userId,updatedHexCode)
-                    // const updatedUser = data.updateDescription.updatedFields;
+                    // const updatedUser = updateDescription.updatedFields;
                     // console.log(updatedUser);
                     // ws.send(Object.values(updatedUser)[0])
-                }else if(data.operationType === 'insert'){
-                    const newUser = data.fullDocument;
-                    console.log(newUser);
-                    // ws.send(JSON.stringify(newUser));
-                }
+                
             });
             // Handle disconnection
             ws.on('close', () => {
@@ -206,8 +239,8 @@ db.once('open', async function(){
         // Create a new user
         app.post('/user', async (req, res) => {
             try {
-            const user =await User.insertMany({ name: req.body.name, devices: [] });
-            res.status(200).send(user);
+            const user =await User.insertMany({ name: req.body.name, devices: [] })
+            res.status(200).send(user[0]);
             } catch (error) {
             res.status(400).send(error);
             }
