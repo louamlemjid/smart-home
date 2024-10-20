@@ -322,15 +322,22 @@ db.once('open', async function(){
                     updateData.startTime = startTime;
                     updateData.endTime = endTime;
                 } else if (device.startsWith('wl')) {
-                    updateData.waterLevel = waterLevel;
+                    
+                    const changeState = await User.findOneAndUpdate(
+                    { name: user, 'devices.name': device },
+                    { $set: { 'devices.$.waterLevel': waterLevel } },  // Update the matched device in the array
+                    { new: true }
+                );
+                    console.log(changeState);
+                    res.status(200).send(changeState);
                 }
         
                 // Update the device in the user's list of devices
-                const changeState = await User.findOneAndUpdate(
-                    { name: user, 'devices.name': device },
-                    { $set: { 'devices.$': updateData } },  // Update the matched device in the array
-                    { new: true }
-                );
+                // const changeState = await User.findOneAndUpdate(
+                //     { name: user, 'devices.name': device },
+                //     { $set: { 'devices.$': updateData } },  // Update the matched device in the array
+                //     { new: true }
+                // );
                 if (activeJobs[device]) {
                     activeJobs[device].forEach(job => job.stop());
                 }
@@ -389,8 +396,7 @@ db.once('open', async function(){
                     activeJobs[device] = [{ cron: onJob }, { cron: offJob }];
                 }
         
-                console.log(changeState);
-                res.status(200).send(changeState);
+                
         
             } catch (error) {
                 console.error(error);
