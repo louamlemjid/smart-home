@@ -324,10 +324,24 @@ db.once('open', async function(){
                 if (device.startsWith('ac')) {
                     updateData.temperature = temperature;
                     updateData.mode = mode;
+                    const changeState = await User.findOneAndUpdate(
+                    { name: user, 'devices.name': device },
+                    { $set: { 'devices.$': updateData } },  // Update the matched device in the array
+                    { new: true }
+                );
+                    console.log(changeState);
+                    res.status(200).send(changeState);
                 } else if (device.startsWith('hv')) {
                     updateData.duration = duration;
                     updateData.startTime = startTime;
                     updateData.endTime = endTime;
+                    const changeState = await User.findOneAndUpdate(
+                    { name: user, 'devices.name': device },
+                    { $set: { 'devices.$': updateData } },  // Update the matched device in the array
+                    { new: true }
+                );
+                    console.log(changeState);
+                    res.status(200).send(changeState);
                 } else if (device.startsWith('wl')) {
                     
                     const changeState = await User.findOneAndUpdate(
@@ -335,6 +349,14 @@ db.once('open', async function(){
                     { $set: { 'devices.$.waterLevel': waterLevel } },  // Update the matched device in the array
                     { new: true }
                 );
+                    console.log(changeState);
+                    res.status(200).send(changeState);
+                }else if(device.startsWith('led')){
+                    const changeState = await User.findOneAndUpdate(
+                        { name: user, 'devices.name': device },
+                        { $set: { 'devices.$.state': state } },  // Update the matched device in the array
+                        { new: true }
+                    );
                     console.log(changeState);
                     res.status(200).send(changeState);
                 }
