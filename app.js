@@ -1,4 +1,5 @@
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const mongoose=require('mongoose');
@@ -7,7 +8,9 @@ const app = express();
 const PORT = 1000;
 const cron = require('node-cron');
 const WebSocket = require('ws');
-const wss = new WebSocket.Server({ port: process.env.PORT || 1000 });
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ noServer: true });
+
 const {User,RemoteControl,Ac} =require('./db');
 let activeJobs = {};
 let clients={}
@@ -66,7 +69,11 @@ db.on('error',console.error.bind(console,'connection error:'));
 db.once('open', async function(){
     console.log('connected to the database');
     try {
-        
+        server.on('upgrade', (req, socket, head) => {
+            wss.handleUpgrade(req, socket, head, (ws) => {
+              wss.emit('connection', ws, req);
+            });
+          });
         // let addedAc=await addNewAc('LG');
         // console.log(addedAc);
         // let updatedAc=await updateAc('LG','cool','auto','8808754',22);
