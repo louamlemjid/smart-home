@@ -115,7 +115,7 @@ db.once('open', async function(){
                 // const data = JSON.parse(message);
                 // console.log("data.type : ",data.type);
                 // console.log("data : ",data);
-                ws.send(`Server received: ${message}`);
+                ws.send(JSON.stringify({message:`Server received: ${message}`}));
                 // You can broadcast a message to all connected clients
                 // wss.clients.forEach((client) => {
                 //     if (client.readyState === WebSocket.OPEN) {
@@ -252,7 +252,11 @@ db.once('open', async function(){
             res.status(400).send(error);
             }
         });
-        
+        app.get('/:user',async(req,res)=>{
+            const user=req.params.user;
+            const userDevices=await User.findOne({name:user});
+            console.log(userDevices);
+        })
         app.post('/:user/device', async (req, res) => {
             try {
               const userName = req.params.user;
