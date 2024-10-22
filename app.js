@@ -115,7 +115,7 @@ db.once('open', async function(){
                 // const data = JSON.parse(message);
                 // console.log("data.type : ",data.type);
                 // console.log("data : ",data);
-                ws.send(JSON.stringify({message:`Server received: ${message}`}));
+                // ws.send(JSON.stringify({message:`Server received: ${message}`}));
                 // You can broadcast a message to all connected clients
                 // wss.clients.forEach((client) => {
                 //     if (client.readyState === WebSocket.OPEN) {
