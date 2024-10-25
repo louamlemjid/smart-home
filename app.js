@@ -254,9 +254,14 @@ db.once('open', async function(){
             }
         });
         app.get('/:user',async(req,res)=>{
-            const user=req.params.user;
+            try {
+                const user=req.params.user;
             const userDevices=await User.findOne({name:user});
             console.log(userDevices);
+            res.status(200).send(JSON.stringify({userId:userDevices._id}));
+            } catch (error) {
+                res.status(400).send(error);
+            }
         })
         app.post('/:user/device', async (req, res) => {
             try {
