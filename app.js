@@ -158,6 +158,7 @@ db.once('open', async function(){
                 console.log("userId: ",userId);
                 const updatedWaterLevel = Object.values(updateDescription.updatedFields)[0]
                 if(clients[userId]){
+                    console.log("la longueur de l'objet est: ",Object.keys(clients).length);
                     let updatedDevices=await User.findOne({_id:userId});
                     clients[userId].send(JSON.stringify({"updatedWaterLevel":updatedWaterLevel,"updatedDevices":updatedDevices}));
                 }
