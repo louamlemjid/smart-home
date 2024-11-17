@@ -36,7 +36,10 @@ const userschema= new mongoose.Schema({
             startTime:Date,
             endTime:Date,
             duration:Number,
-            waterLevel:Number
+            waterLevel:Number,
+            tankLength:Number,
+            tankWidth:Number,
+            tankDepth:Number,
         }
     ]
 });

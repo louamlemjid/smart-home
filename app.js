@@ -23,6 +23,17 @@ function convertMinutesToCron(minutes) {
     const mins = minutes % 60;
     return `${mins} ${hours} * * *`; // Cron syntax for minute and hour
 }
+const sensorReadingToDepth=(sensorReading,lowestReading=4,higestReading=3000,maxAngle=90)=>{
+    // Ensure the sensor reading is within the expected range (4 to 2500)
+  if (sensorReading < lowestReading || sensorReading > highestReading) {
+    console.error('Sensor reading out of range');
+    return null; 
+  }
+
+  // Calculate the angle based on the new sensor range
+  const angle = ((sensorReading - lowestReading) / (highestReading - lowestReading)) * maxAngle;
+  return angle;
+  }
 //hexadecial to signal converter
 function hexToSignla(hex,startBurst=8700,space=4100,afterSpace=530,oneBurst=1560,zeroBurst=550,neutral=470){
     console.log(hex);
@@ -59,7 +70,7 @@ mongoose.connect('mongodb+srv://louam-lemjid:8hAgfKf2ZDauLxoj@cluster0.mjqmopn.m
 app.use(cors({
     origin: ['http://localhost:8081', 'https://smart-home-v418.onrender.com','http://192.168.1.104:8080'], // Allow your frontend and your deployed site
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Include PATCH if you're using it
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type','Access-Control-Allow-Origin','Authorization']
 }));
 // Body parsing middleware
 app.use(express.urlencoded({ extended: true }));
@@ -342,7 +353,7 @@ db.once('open', async function(){
         app.patch('/:user/:device', async (req, res) => {
             try {
                 const { device, user } = req.params;
-                const { state, temperature, mode, duration, startTime, endTime, waterLevel } = req.body;
+                const { state, temperature, mode, duration, startTime, endTime, waterLevel,tankDepth,tankLength,tankWidth } = req.body;
                 let AmplifiedDuration=duration*2;
                 if(AmplifiedDuration==60){
                     AmplifiedDuration=59;
@@ -375,10 +386,14 @@ db.once('open', async function(){
                     console.log(changeState);
                     res.status(200).send(changeState);
                 } else if (device.startsWith('wl')) {
-                    
+                    updateData.waterLevel = sensorReadingToDepth(waterLevel);
+                    updateData.tankDepth=tankDepth;
+                    updateData.tankLength=tankLength;
+                    updateData.tankWidth=tankWidth;
+
                     const changeState = await User.findOneAndUpdate(
                     { name: user, 'devices.name': device },
-                    { $set: { 'devices.$.waterLevel': waterLevel } },  // Update the matched device in the array
+                    { $set: { 'devices.$': updateData } },  // Update the matched device in the array
                     { new: true }
                 );
                     console.log(changeState);
