@@ -59,7 +59,7 @@ mongoose.connect('mongodb+srv://louam-lemjid:8hAgfKf2ZDauLxoj@cluster0.mjqmopn.m
 app.use(cors({
     origin: ['http://localhost:8081', 'https://smart-home-v418.onrender.com','http://192.168.1.104:8080'], // Allow your frontend and your deployed site
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Include PATCH if you're using it
-    allowedHeaders: ['Content-Type', 'Authorization','Access-Control-Allow-Origin']
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 // Body parsing middleware
 app.use(express.urlencoded({ extended: true }));
@@ -101,7 +101,7 @@ db.once('open', async function(){
         });
         wss.on('connection', (ws,req) => {
             console.log('Client connected');
-            const url = new URL(req.url, 'http://localhost:8080');
+            const url = new URL(req.url, 'https://smart-home-v418.onrender.com');
             // Get the value of userId from the query string
             const userId = url.searchParams.get('userId');
             console.log(userId);
@@ -253,6 +253,28 @@ db.once('open', async function(){
             res.status(400).send(error);
             }
         });
+        app.get('/statistics', async (req, res) => {
+            try {
+              // Aggregate to get the total number of devices across all users
+              const totalDevices = await User.aggregate([
+                {
+                  $group: {
+                    _id: null,
+                    totalDevices: { $sum: { $size: "$devices" } }
+                  }
+                }
+              ]);
+              const numberOfUsers = await User.countDocuments();
+              // Extract totalDevices count from the result
+              const totalDeviceCount = totalDevices[0]?.totalDevices || 0;
+              console.log(totalDeviceCount);
+              // Send the response
+              res.status(200).json({ totalDevices: totalDeviceCount, numberOfUsers : numberOfUsers });
+            } catch (error) {
+              console.error("Error fetching statistics:", error);
+              res.status(500).json({ message: "Error fetching statistics" });
+            }
+          });
         app.get('/:user',async(req,res)=>{
             try {
                 const user=req.params.user;
