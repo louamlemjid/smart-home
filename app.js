@@ -32,7 +32,7 @@ const sensorReadingToDepth=(sensorReading,lowestReading=4,highestReading=3000,ma
 
   // Calculate the angle based on the new sensor range
   const angle = ((sensorReading - lowestReading) / (highestReading - lowestReading)) * maxAngle;
-  return angle;
+  return Math.round(angle*100)/100;
   }
 //hexadecial to signal converter
 function hexToSignla(hex,startBurst=8700,space=4100,afterSpace=530,oneBurst=1560,zeroBurst=550,neutral=470){
