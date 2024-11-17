@@ -112,7 +112,7 @@ db.once('open', async function(){
         });
         wss.on('connection', (ws,req) => {
             console.log('Client connected');
-            const url = new URL(req.url, 'http://localhost:1000');
+            const url = new URL(req.url, 'https://smart-home-v418.onrender.com/');
             // Get the value of userId from the query string
             const userId = url.searchParams.get('userId');
             console.log(userId);
