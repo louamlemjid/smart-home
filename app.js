@@ -23,7 +23,7 @@ function convertMinutesToCron(minutes) {
     const mins = minutes % 60;
     return `${mins} ${hours} * * *`; // Cron syntax for minute and hour
 }
-const sensorReadingToDepth=(sensorReading,lowestReading=4,higestReading=3000,maxAngle=90)=>{
+const sensorReadingToDepth=(sensorReading,lowestReading=4,highestReading=3000,maxAngle=90)=>{
     // Ensure the sensor reading is within the expected range (4 to 2500)
   if (sensorReading < lowestReading || sensorReading > highestReading) {
     console.error('Sensor reading out of range');
@@ -350,7 +350,7 @@ db.once('open', async function(){
             res.status(400).send(error);
             }
         });
-        app.patch('/:user/:device', async (req, res) => {
+        app.post('/:user/:device', async (req, res) => {
             try {
                 const { device, user } = req.params;
                 const { state, temperature, mode, duration, startTime, endTime, waterLevel,tankDepth,tankLength,tankWidth } = req.body;
