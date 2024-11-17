@@ -112,7 +112,7 @@ db.once('open', async function(){
         });
         wss.on('connection', (ws,req) => {
             console.log('Client connected');
-            const url = new URL(req.url, 'https://smart-home-v418.onrender.com');
+            const url = new URL(req.url, 'http://localhost:1000');
             // Get the value of userId from the query string
             const userId = url.searchParams.get('userId');
             console.log(userId);
@@ -353,7 +353,8 @@ db.once('open', async function(){
         app.post('/:user/:device', async (req, res) => {
             try {
                 const { device, user } = req.params;
-                const { state, temperature, mode, duration, startTime, endTime, waterLevel,tankDepth,tankLength,tankWidth } = req.body;
+                let { state, temperature, mode, duration, startTime, endTime, waterLevel,tankDepth,tankLength,tankWidth } = req.body;
+                waterLevel=sensorReadingToDepth(waterLevel);
                 let AmplifiedDuration=duration*2;
                 if(AmplifiedDuration==60){
                     AmplifiedDuration=59;
@@ -386,18 +387,33 @@ db.once('open', async function(){
                     console.log(changeState);
                     res.status(200).send(changeState);
                 } else if (device.startsWith('wl')) {
-                    updateData.waterLevel = sensorReadingToDepth(waterLevel);
-                    updateData.tankDepth=tankDepth;
+                    updateData.waterLevel = waterLevel
+                    console.log("water level updated: ",waterLevel);
+                    if(tankDepth && tankLength && tankWidth){
+                        updateData.tankDepth=tankDepth;
                     updateData.tankLength=tankLength;
                     updateData.tankWidth=tankWidth;
-
                     const changeState = await User.findOneAndUpdate(
-                    { name: user, 'devices.name': device },
-                    { $set: { 'devices.$': updateData } },  // Update the matched device in the array
-                    { new: true }
-                );
-                    console.log(changeState);
-                    res.status(200).send(changeState);
+                        { name: user, 'devices.name': device },
+                        { $set: { 'devices.$.tankDepth': tankDepth,
+                            'devices.$.tankLength': tankLength,
+                            'devices.$.tankWidth': tankWidth,
+                         } },  // Update the matched device in the array
+                        { new: true }
+                    );
+                        console.log(changeState);
+                        res.status(200).send(changeState);
+                    }else{
+                        const changeState = await User.findOneAndUpdate(
+                            { name: user, 'devices.name': device },
+                            { $set: { 'devices.$.waterLevel': waterLevel } },  // Update the matched device in the array
+                            { new: true }
+                        );
+                            console.log(changeState);
+                            res.status(200).send(changeState);
+                    }
+
+                    
                 }else if(device.startsWith('led')){
                     const changeState = await User.findOneAndUpdate(
                         { name: user, 'devices.name': device },
