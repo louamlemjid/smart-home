@@ -11,7 +11,7 @@ const WebSocket = require('ws');
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ noServer: true });
 
-const {User,RemoteControl,Ac} =require('./db');
+const {User,RemoteControl,Ac,Product} =require('./db');
 let activeJobs = {};
 let clients={}
 const addNewAc = require('./controllers/crudAc/addNewAc');
@@ -110,6 +110,25 @@ db.once('open', async function(){
                 
             }
         });
+        app.get('/products',async(req,res)=>{
+            try {
+                const products=await Product.find({});
+                res.status(200).json({productsList:products});
+            } catch (error) {
+                console.error("products route failed: ",error);
+                res.status(400).json({message:"failed to fetch products"});
+            }
+        })
+        app.post('/products',async(req,res)=>{
+            try {
+                const {name,price,description}=req.body;
+                const newProduct=await Product.insertMany({name,price,description});
+                res.status(200).json({newProduct:newProduct});
+            } catch (error) {
+                console.error("products route failed: ",error);
+                res.status(400).json({message:"failed to fetch products"});
+            }
+        })
         wss.on('connection', (ws,req) => {
             console.log('Client connected');
             const url = new URL(req.url, 'https://smart-home-v418.onrender.com/');

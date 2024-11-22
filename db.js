@@ -1,5 +1,13 @@
 const mongoose = require('mongoose');
 // Models
+const Productschema = new mongoose.Schema({
+    name: String,
+    price: Number,
+    description: String,
+    category: String,
+    image: String
+});
+const Product = mongoose.model('Product', Productschema);
 const Acschema = new mongoose.Schema({
     name: String,
     modes: [
@@ -84,4 +92,4 @@ const remoteControlschema= new mongoose.Schema({
     },
 });
 const RemoteControl=mongoose.model('RemoteControl',remoteControlschema);
-module.exports={User,RemoteControl,Ac};
+module.exports={User,RemoteControl,Ac,Product};
