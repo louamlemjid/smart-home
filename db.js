@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { off } = require('./app');
 // Models
 const Productschema = new mongoose.Schema({
     name: String,
@@ -10,6 +11,8 @@ const Productschema = new mongoose.Schema({
 const Product = mongoose.model('Product', Productschema);
 const Acschema = new mongoose.Schema({
     name: String,
+    on:String,
+    off:String,
     modes: [
         {
             modeType:String,

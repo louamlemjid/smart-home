@@ -70,7 +70,7 @@ mongoose.connect('mongodb+srv://louam-lemjid:8hAgfKf2ZDauLxoj@cluster0.mjqmopn.m
 app.use(cors({
     origin: ['http://localhost:8081', 'https://smart-home-v418.onrender.com','http://192.168.1.104:8080'], // Allow your frontend and your deployed site
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Include PATCH if you're using it
-    allowedHeaders: ['Content-Type','Access-Control-Allow-Origin','Authorization']
+    allowedHeaders: ['Content-Type','Access-Control-Allow-Origin','Authorization','Cache-Control']
 }));
 //routes
 app.use('/statistics',statistics);
