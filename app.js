@@ -10,7 +10,7 @@ const cron = require('node-cron');
 const WebSocket = require('ws');
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ noServer: true });
-
+const statistics=require('./services/statistics/getStatistics');
 const {User,RemoteControl,Ac,Product} =require('./db');
 let activeJobs = {};
 let clients={}
@@ -72,6 +72,8 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Include PATCH if you're using it
     allowedHeaders: ['Content-Type','Access-Control-Allow-Origin','Authorization']
 }));
+//routes
+app.use('/statistics',statistics);
 // Body parsing middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -96,11 +98,41 @@ db.once('open', async function(){
         // Routes
 
         // Create WebSocket server on port 8080
+
+        // Set up an SSE route
+        app.get('/events', (req, res) => {
+            // Set the correct headers for SSE
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            res.flushHeaders();
+        
+            // Send a message every 2 seconds
+            User.watch([
+                {
+                    $match: {
+                        "operationType": "update",
+                        "updateDescription.updatedFields.postedHexadecimalCode": { $exists: true }
+                    }
+                }
+            ]).on('change', (data) => {
+                console.log('Change detected:', data);
+                    const { documentKey, updateDescription } =data;
+                    const userId = documentKey._id;
+                    const updatedHexCode = updateDescription.updatedFields.postedHexadecimalCode;
+                    console.log("after update: ",userId,updatedHexCode)
+                    res.write(`data: ${JSON.stringify(updatedHexCode)}\n\n`);
+            });
+        
+            // Clean up when the connection is closed
+            req.on('close', () => {
+            // close something
+            });
+        });
         app.patch('/:user/ac/microcontroller', async(req, res) => {
             try {
                 const {user}=req.params;
                 const {hexadecimalCode}=req.body;
-                console.log(user,hexadecimalCode);
                 console.log(user,hexadecimalCode);
                 const postCode=await User.updateOne({name:user},{$set:{postedHexadecimalCode:hexadecimalCode}});
                 console.log(postCode);
@@ -224,10 +256,22 @@ db.once('open', async function(){
                 const { acName,mode, fanSpeed, temperature, heatLevel, hexadecimalCode } = req.body;
                 console.log(acName,mode, fanSpeed, temperature, heatLevel, hexadecimalCode);
                 const updatedAc = await updateAc(acName, mode, fanSpeed, hexadecimalCode, temperature, heatLevel);
-                res.status(200).send(updatedAc);
+                res.status(200).json({updatedAc:updatedAc});
                 console.log(updatedAc);
             } catch (error) {
-                res.status(400).send(error);
+                res.status(400).json({error:error});
+                console.log("error in patch /ac route: ",error)
+            }
+        });
+        app.post('/ac', async(req, res) => {
+            try {
+                const {acName}=req.body
+                console.log(acName)
+                const addedAc=await addNewAc(acName);
+                res.status(200).json({addedAc:addedAc});
+            } catch (error) {
+                res.status(400).json({error:error});
+                console.log("error in post /ac route: ",error)
             }
         });
         app.get('/ac',async(req,res)=>{
@@ -237,9 +281,11 @@ db.once('open', async function(){
                 console.log("list of ac names:",acNames)
                 res.status(200).json({acList:acNames})
             } catch (error) {
-                console.error(error);
+                res.status(400).json({error:error});   
+                console.log("error in get /ac route: ",error)
             }
         })
+        
         app.post('/admin', async(req, res) => {
             const state=req.body.switch;
             console.log(state);
@@ -530,3 +576,4 @@ db.once('open', async function(){
 server.listen(process.env.PORT || PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+module.exports = app;

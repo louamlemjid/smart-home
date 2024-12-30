@@ -1,25 +1,26 @@
 // routes/statistics.js
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User'); // Adjust the path as necessary
+const {User}= require('../../db'); // Adjust the path as necessary
 
-router.get('/statistics', async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     // Get the number of devices for each user
     const deviceCounts = await User.aggregate([
       {
-        $project: {
-          name: 1,
-          deviceCount: { $size: "$devices" }
+        $group: {
+          _id: null,  // Grouping everything into a single group
+          totalDevices: { $sum: { $size: "$devices" } }, // Sum the number of devices
+          totalUsers: { $sum: 1 },  // Count the number of users
         }
       }
     ]);
-
+    console.log("deviceCounts:", deviceCounts[0]);
     // Send the response
-    res.json(deviceCounts);
+    res.status(200).json(deviceCounts[0]);
   } catch (error) {
     console.error("Error fetching statistics:", error);
-    res.status(500).json({ message: "Error fetching statistics" });
+    res.status(400).json({ message: "Error fetching statistics" });
   }
 });
 
