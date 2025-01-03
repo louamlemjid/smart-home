@@ -253,9 +253,9 @@ db.once('open', async function(){
         });
         app.patch('/ac', async(req, res) => {
             try {
-                const { acName,mode, fanSpeed, temperature, heatLevel, hexadecimalCode } = req.body;
-                console.log(acName,mode, fanSpeed, temperature, heatLevel, hexadecimalCode);
-                const updatedAc = await updateAc(acName, mode, fanSpeed, hexadecimalCode, temperature, heatLevel);
+                const { acName,mode, fanSpeed, temperature, heatLevel, hexadecimalCode,power } = req.body;
+                console.log(acName,mode, fanSpeed, temperature, heatLevel, hexadecimalCode,power);
+                const updatedAc = await updateAc(acName, mode, fanSpeed, hexadecimalCode, temperature, heatLevel,power);
                 res.status(200).json({updatedAc:updatedAc});
                 console.log(updatedAc);
             } catch (error) {
@@ -419,7 +419,7 @@ db.once('open', async function(){
             try {
                 const { device, user } = req.params;
                 let { state, temperature, mode, duration, startTime, endTime, waterLevel,tankDepth,tankLength,tankWidth } = req.body;
-                waterLevel=sensorReadingToDepth(waterLevel);
+                waterLevel=sensorReadingToDepth(waterLevel,highestReading=1023);
                 let AmplifiedDuration=duration*2;
                 if(AmplifiedDuration==60){
                     AmplifiedDuration=59;
