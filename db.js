@@ -51,6 +51,8 @@ const userschema= new mongoose.Schema({
             tankLength:Number,
             tankWidth:Number,
             tankDepth:Number,
+            maxWaterLevel:Number,
+            minWaterLevel:Number
         }
     ]
 });

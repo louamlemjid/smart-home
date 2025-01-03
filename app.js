@@ -23,18 +23,23 @@ function convertMinutesToCron(minutes) {
     const mins = minutes % 60;
     return `${mins} ${hours} * * *`; // Cron syntax for minute and hour
 }
-const sensorReadingToDepth=(sensorReading,lowestReading=1,highestReading=1025,maxAngle=90)=>{
+const sensorReadingToDepth=(sensorReading,lowestReading=1,highestReading=337,maxAngle=100)=>{
     // Ensure the sensor reading is within the expected range (4 to 2500)
     console.log(highestReading,lowestReading);
-  if (sensorReading < lowestReading || sensorReading > highestReading) {
+  if (sensorReading < lowestReading ) {
     console.error('Sensor reading out of range');
-    return null; 
-  }
-
-  // Calculate the angle based on the new sensor range
+    return lowestReading; 
+  }else if(sensorReading > highestReading){
+    console.error('Sensor reading out of range');
+    return highestReading; 
+  }else{
+// Calculate the angle based on the new sensor range
   const angle = ((sensorReading - lowestReading) / (highestReading - lowestReading)) * maxAngle;
   console.log(angle);
   return Math.round(angle*100)/100;
+  }
+
+  
   }
 //hexadecial to signal converter
 function hexToSignla(hex,startBurst=8700,space=4100,afterSpace=530,oneBurst=1560,zeroBurst=550,neutral=470){
