@@ -23,7 +23,7 @@ function convertMinutesToCron(minutes) {
     const mins = minutes % 60;
     return `${mins} ${hours} * * *`; // Cron syntax for minute and hour
 }
-const sensorReadingToDepth=(sensorReading,lowestReading=1,highestReading=1023,maxAngle=90)=>{
+const sensorReadingToDepth=(sensorReading,lowestReading=1,highestReading=1025,maxAngle=90)=>{
     // Ensure the sensor reading is within the expected range (4 to 2500)
     console.log(highestReading,lowestReading);
   if (sensorReading < lowestReading || sensorReading > highestReading) {
