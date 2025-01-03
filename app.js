@@ -421,7 +421,7 @@ db.once('open', async function(){
             try {
                 const { device, user } = req.params;
                 let { state, temperature, mode, duration, startTime, endTime, waterLevel,tankDepth,tankLength,tankWidth } = req.body;
-                waterLevel=sensorReadingToDepth(waterLevel,highestReading=1023);
+                waterLevel=sensorReadingToDepth(waterLevel);
                 let AmplifiedDuration=duration*2;
                 if(AmplifiedDuration==60){
                     AmplifiedDuration=59;
