@@ -28,10 +28,10 @@ const sensorReadingToDepth=(sensorReading,lowestReading=1,highestReading=337,max
     console.log(highestReading,lowestReading);
   if (sensorReading < lowestReading ) {
     console.error('Sensor reading out of range');
-    return lowestReading; 
+    return 1; 
   }else if(sensorReading > highestReading){
     console.error('Sensor reading out of range');
-    return highestReading; 
+    return 100; 
   }else{
 // Calculate the angle based on the new sensor range
   const angle = ((sensorReading - lowestReading) / (highestReading - lowestReading)) * maxAngle;
