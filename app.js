@@ -425,8 +425,9 @@ db.once('open', async function(){
         app.post('/:user/:device', async (req, res) => {
             try {
                 const { device, user } = req.params;
-                let { state, temperature, mode, duration, startTime, endTime, waterLevel,tankDepth,tankLength,tankWidth } = req.body;
-                waterLevel=sensorReadingToDepth(waterLevel);
+                let { state, temperature, mode, duration, startTime, 
+                    endTime, waterLevel,tankDepth,tankLength,tankWidth,maxWaterLevel } = req.body;
+                // waterLevel=sensorReadingToDepth(waterLevel);
                 let AmplifiedDuration=duration*2;
                 if(AmplifiedDuration==60){
                     AmplifiedDuration=59;
@@ -461,7 +462,7 @@ db.once('open', async function(){
                 } else if (device.startsWith('wl')) {
                     updateData.waterLevel = waterLevel
                     console.log("water level updated: ",waterLevel);
-                    if(tankDepth && tankLength && tankWidth){
+                    if(tankDepth && maxWaterLevel){
                         updateData.tankDepth=tankDepth;
                     updateData.tankLength=tankLength;
                     updateData.tankWidth=tankWidth;
@@ -470,6 +471,7 @@ db.once('open', async function(){
                         { $set: { 'devices.$.tankDepth': tankDepth,
                             'devices.$.tankLength': tankLength,
                             'devices.$.tankWidth': tankWidth,
+                            'devices.$.maxWaterLevel': maxWaterLevel,
                          } },  // Update the matched device in the array
                         { new: true }
                     );

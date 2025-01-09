@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
-const { off } = require('./app');
+
 // Models
+const Smartxschema = new mongoose.Schema({
+    websiteLink: String,
+});
+const Smartx = mongoose.model('Smartx', Smartxschema);
 const Productschema = new mongoose.Schema({
     name: String,
     price: Number,
@@ -37,6 +41,7 @@ const Acschema = new mongoose.Schema({
 const Ac = mongoose.model('Ac', Acschema);
 const userschema= new mongoose.Schema({
     name:String,
+    email:String,
     postedHexadecimalCode:String,
     devices:[
         {
