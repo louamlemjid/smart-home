@@ -3,7 +3,7 @@ async function addNewAc(AcName) {
     try {
         const modes = [
             {
-                modeType: 'cool',
+                modeType: 'cold',
                 fanSettings: [
                     {
                     fanSpeed: 'auto',

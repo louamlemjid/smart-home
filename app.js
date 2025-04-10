@@ -17,6 +17,8 @@ let clients={}
 const addNewAc = require('./controllers/crudAc/addNewAc');
 const updateAc = require('./controllers/crudAc/updateAc');
 const getAcNames=require('./controllers/crudAc/getAcNames')
+const getAcRowData=require('./controllers/crudAc/getAcRowData')
+
 // Helper function to convert minutes to cron syntax
 function convertMinutesToCron(minutes) {
     const hours = Math.floor(minutes / 60);
@@ -105,7 +107,7 @@ db.once('open', async function(){
         // Routes
 
         // Create WebSocket server on port 8080
-
+        
         // Set up an SSE route
         app.get('/events', (req, res) => {
             // Set the correct headers for SSE
@@ -113,42 +115,60 @@ db.once('open', async function(){
             res.setHeader('Cache-Control', 'no-cache');
             res.setHeader('Connection', 'keep-alive');
             res.flushHeaders();
-        
-            // Send a message every 2 seconds
-            User.watch([
-                {
-                    $match: {
-                        "operationType": "update",
-                        "updateDescription.updatedFields.postedHexadecimalCode": { $exists: true }
-                    }
+            
+            // Send initial connection message
+            // res.write(`data: {"test": "SSE connection established"}\n\n`);
+            
+            // Create the change stream
+            const changeStream = User.watch([
+              {
+                $match: {
+                  "operationType": "update",
+                  "updateDescription.updatedFields.postedRowData": { $exists: true }
                 }
-            ]).on('change', (data) => {
-                console.log('Change detected:', data);
-                    const { documentKey, updateDescription } =data;
-                    const userId = documentKey._id;
-                    const updatedHexCode = updateDescription.updatedFields.postedHexadecimalCode;
-                    console.log("after update: ",userId,updatedHexCode)
-                    res.write(`data: ${JSON.stringify(updatedHexCode)}\n\n`);
-            });
-        
+              }
+            ]);
+            
+            // Set up the event handler
+            const changeHandler = (data) => {
+              console.log('Change detected in SSE:', data);
+              const { documentKey, updateDescription } = data;
+              const userId = documentKey._id;
+              const updatedRowData = updateDescription.updatedFields.postedRowData;
+              console.log(typeof JSON.stringify(updatedRowData));
+              
+              // Send the data and flush
+              res.write(`data: ${JSON.stringify(updatedRowData)}\n\n`);
+            };
+            
+            // Register the handler
+            changeStream.on('change', changeHandler);
+            
             // Clean up when the connection is closed
             req.on('close', () => {
-            // close something
+              console.log('SSE connection closed');
+              // Remove the change handler and close the stream
+              changeStream.removeListener('change', changeHandler);
+              changeStream.close();
             });
-        });
+          });
+
         app.patch('/:user/ac/microcontroller', async(req, res) => {
             try {
                 const {user}=req.params;
-                const {hexadecimalCode}=req.body;
-                console.log(user,hexadecimalCode);
-                const postCode=await User.updateOne({name:user},{$set:{postedHexadecimalCode:hexadecimalCode}});
+                const {hexadecimalCode,signal}=req.body;
+                console.log(user,signal);
+                const postCode=await User.updateOne({name:user},
+                    {$set:{postedHexadecimalCode:hexadecimalCode,
+                        postedRowData:signal
+                    }});
                 console.log(postCode);
                 res.status(200).send(postCode);
             } catch (error) {
                 res.status(400).send(error);
-                
             }
         });
+
         app.get('/products',async(req,res)=>{
             try {
                 const products=await Product.find({});
@@ -258,11 +278,11 @@ db.once('open', async function(){
                 console.log('Client disconnected');
             });
         });
-        app.patch('/ac', async(req, res) => {
+        app.post('/ac', async(req, res) => {
             try {
-                const { acName,mode, fanSpeed, temperature, heatLevel, hexadecimalCode,power } = req.body;
-                console.log(acName,mode, fanSpeed, temperature, heatLevel, hexadecimalCode,power);
-                const updatedAc = await updateAc(acName, mode, fanSpeed, hexadecimalCode, temperature, heatLevel,power);
+                const { acName,mode, fanSpeed, temperature, heatLevel, rowData,power } = req.body;
+                console.log(acName,mode, fanSpeed, temperature, heatLevel, rowData,power);
+                const updatedAc = await updateAc(acName, mode, fanSpeed, rowData, temperature, heatLevel,power);
                 res.status(200).json({updatedAc:updatedAc});
                 console.log(updatedAc);
             } catch (error) {
@@ -368,6 +388,7 @@ db.once('open', async function(){
                 res.status(400).send(error);
             }
         })
+        //create a device
         app.post('/:user/device', async (req, res) => {
             try {
               const userName = req.params.user;
@@ -411,7 +432,10 @@ db.once('open', async function(){
         // Get JSON object for a device
         app.get('/:user/:device', async (req, res) => {
             try {
-            const user = await User.findOne({ name: req.params.user });
+            const user = await User.findOneAndUpdate({ name: req.params.user },
+                { $set: { 'devices.$[elem].lastUpdate': new Date() } },
+                { arrayFilters: [{ 'elem.name': req.params.device }] }
+            );
             
             if (!user) {
                 return res.status(404).send('User not found');
@@ -422,11 +446,29 @@ db.once('open', async function(){
             res.status(400).send(error);
             }
         });
+
+        app.post('/ac/rowdata', async (req, res) => {
+            try {
+                console.log("getAcRowData route is called")
+                const {acName,modeType,fanSpeed,temperature,powerState,heatLevel}=req.body;
+                console.log(acName,modeType,fanSpeed,temperature,powerState,heatLevel);
+                const rowData=await getAcRowData(acName,modeType,fanSpeed,temperature,powerState,heatLevel);
+                console.log(rowData);
+                const convertedData= rowData[0].split(',').map(Number);
+                console.log("converted data: ",convertedData);
+                res.status(200).json({rowData:convertedData});
+
+            } catch (error) {
+                console.error("error in getAcRowData: ",error);
+                res.status(400).json({error:error});
+            }
+        })
         app.post('/:user/:device', async (req, res) => {
             try {
                 const { device, user } = req.params;
-                let { state, temperature, mode, duration, startTime, 
-                    endTime, waterLevel,tankDepth,tankLength,tankWidth,maxWaterLevel } = req.body;
+                let { state, temperature,fanSpeed, mode, duration, startTime, 
+                    endTime, waterLevel,tankDepth,tankLength,tankWidth,maxWaterLevel,lastUpdate } = req.body;
+                    console.log("remote devices data:",req.body);
                 // waterLevel=sensorReadingToDepth(waterLevel);
                 let AmplifiedDuration=duration*2;
                 if(AmplifiedDuration==60){
@@ -435,12 +477,14 @@ db.once('open', async function(){
                 let updateData = {
                     name: device,
                     state: state,
+                    lastUpdate:lastUpdate
                 };
         
                 // Conditionally add fields based on device type
                 if (device.startsWith('ac')) {
                     updateData.temperature = temperature;
                     updateData.mode = mode;
+                    updateData.fanSpeed = fanSpeed;
                     const changeState = await User.findOneAndUpdate(
                     { name: user, 'devices.name': device },
                     { $set: { 'devices.$': updateData } },  // Update the matched device in the array
@@ -480,7 +524,9 @@ db.once('open', async function(){
                     }else{
                         const changeState = await User.findOneAndUpdate(
                             { name: user, 'devices.name': device },
-                            { $set: { 'devices.$.waterLevel': waterLevel } },  // Update the matched device in the array
+                            { $set: { 'devices.$.waterLevel': waterLevel,
+                              'devices.$.lastUpdate':new Date() 
+                             } },  // Update the matched device in the array
                             { new: true }
                         );
                             console.log(changeState);

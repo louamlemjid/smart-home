@@ -15,8 +15,8 @@ const Productschema = new mongoose.Schema({
 const Product = mongoose.model('Product', Productschema);
 const Acschema = new mongoose.Schema({
     name: String,
-    on:String,
-    off:String,
+    on:Array,
+    off:Array,
     modes: [
         {
             modeType:String,
@@ -24,9 +24,11 @@ const Acschema = new mongoose.Schema({
                 {
                     fanSpeed:String,
                     hexadecimalCode:String,
+                    rowData:Array,
                     codes:[
                         {
                             hexadecimalCode:String,
+                            rowData:Array,
                             temperature:Number,
                             heatLevel:Number
                         }
@@ -43,12 +45,16 @@ const userschema= new mongoose.Schema({
     name:String,
     email:String,
     postedHexadecimalCode:String,
+    postedRowData:Array,
     devices:[
         {
             name:String,
+            customName:String,
+            acName:String,
             state:Boolean,
             temperature:Number,
             mode:String,
+            fanSpeed:String,
             startTime:Date,
             endTime:Date,
             duration:Number,
@@ -57,7 +63,8 @@ const userschema= new mongoose.Schema({
             tankWidth:Number,
             tankDepth:Number,
             maxWaterLevel:Number,
-            minWaterLevel:Number
+            minWaterLevel:Number,
+            lastUpdate:Date,
         }
     ]
 });

@@ -1,21 +1,21 @@
 const {Ac}=require('../../db');
-async function updateAc(acName, modeType, fanSpeed, newHexCode, temperature, heatLevel,powerState) {
+async function updateAc(acName, modeType, fanSpeed, rowData, temperature, heatLevel,powerState) {
     try {
-        if (powerState!=true && powerState!=false) {
+        if (powerState!="on" && powerState!="off") {
             let updateQuery = {};
             let arrayFilters = [];
 
             // Use switch to handle different mode types
             switch (modeType) {
-                case "cool":
-                    // Update by temperature for 'cool' mode
+                case "cold":
+                    // Update by temperature for 'cold' mode
                     updateQuery = {
                         $set: {
-                            'modes.$[mode].fanSettings.$[fan].codes.$[code].hexadecimalCode': newHexCode
+                            'modes.$[mode].fanSettings.$[fan].codes.$[code].rowData': rowData
                         }
                     };
                     arrayFilters = [
-                        { 'mode.modeType': modeType },  // Match the mode type (cool)
+                        { 'mode.modeType': modeType },  // Match the mode type (cold)
                         { 'fan.fanSpeed': fanSpeed },   // Match the fan speed (autoFan, lowFan, etc.)
                         { 'code.temperature': temperature } // Match the specific temperature
                     ];
@@ -25,7 +25,7 @@ async function updateAc(acName, modeType, fanSpeed, newHexCode, temperature, hea
                     // Update by heat level for 'heat' mode
                     updateQuery = {
                         $set: {
-                            'modes.$[mode].fanSettings.$[fan].codes.$[code].hexadecimalCode': newHexCode
+                            'modes.$[mode].fanSettings.$[fan].codes.$[code].rowData': rowData
                         }
                     };
                     arrayFilters = [
@@ -36,11 +36,23 @@ async function updateAc(acName, modeType, fanSpeed, newHexCode, temperature, hea
                     break;
 
                 case "fan":
+                    // Update by fan speed for 'fan' mode (no temperature or heat level)
+                    updateQuery = {
+                        $set: {
+                            'modes.$[mode].fanSettings.$[fan].rowData': rowData
+                        }
+                    };
+                    arrayFilters = [
+                        { 'mode.modeType': modeType },  // Match the mode type (fan)
+                        { 'fan.fanSpeed': fanSpeed }    // Match the fan speed (autoFan, lowFan, etc.)
+                    ];
+                    break;
+                    
                 case "dry":
                     // Update by fan speed for 'fan' or 'dry' modes (no temperature or heat level)
                     updateQuery = {
                         $set: {
-                            'modes.$[mode].fanSettings.$[fan].hexadecimalCode': newHexCode
+                            'modes.$[mode].fanSettings.$[fan].rowData': rowData
                         }
                     };
                     arrayFilters = [
@@ -63,23 +75,23 @@ async function updateAc(acName, modeType, fanSpeed, newHexCode, temperature, hea
                 }
             );
             return updatedAc;
-        }else if(powerState==true){
+        }else if(powerState=="on"){
             const updatedAc = await Ac.updateOne(
                 { name: acName },
                 {
                     $set: {
-                        'on': newHexCode
+                        'on': rowData
                     }
                 }
             );
             return updatedAc;
 
-        }else if(powerState==false){
+        }else if(powerState=="off"){
             const updatedAc = await Ac.updateOne(
                 { name: acName },
                 {
                     $set: {
-                        'off': newHexCode
+                        'off': rowData
                     }
                 }
             );
@@ -93,6 +105,7 @@ async function updateAc(acName, modeType, fanSpeed, newHexCode, temperature, hea
         throw error;
     }
 }
+
 
 
 module.exports = updateAc;
