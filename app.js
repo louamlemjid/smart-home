@@ -510,6 +510,7 @@ db.once('open', async function(){
                         updateData.tankDepth=depth;
                     updateData.tankLength=tankLength;
                     updateData.tankWidth=tankWidth;
+                    updateData.maxWaterLevel=maxHeight;
                     const changeState = await User.findOneAndUpdate(
                         { name: user, 'devices.name': device },
                         { $set: { 'devices.$': updateData } },
