@@ -512,11 +512,7 @@ db.once('open', async function(){
                     updateData.tankWidth=tankWidth;
                     const changeState = await User.findOneAndUpdate(
                         { name: user, 'devices.name': device },
-                        { $set: { 'devices.$.tankDepth': depth,
-                            'devices.$.tankLength': tankLength,
-                            'devices.$.tankWidth': tankWidth,
-                            'devices.$.maxWaterLevel': maxHeight,
-                         } },  // Update the matched device in the array
+                        { $set: { 'devices.$': updateData } },
                         { new: true }
                     );
                         console.log(changeState);
