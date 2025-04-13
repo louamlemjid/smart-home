@@ -467,7 +467,7 @@ db.once('open', async function(){
             try {
                 const { device, user } = req.params;
                 let { state, temperature,fanSpeed, mode, duration, startTime, 
-                    endTime, waterLevel,tankDepth,tankLength,tankWidth,maxWaterLevel,lastUpdate } = req.body;
+                    endTime, waterLevel,depth,tankLength,tankWidth,maxHeight,lastUpdate } = req.body;
                     console.log("remote devices data:",req.body);
                 // waterLevel=sensorReadingToDepth(waterLevel);
                 let AmplifiedDuration=duration*2;
@@ -506,16 +506,16 @@ db.once('open', async function(){
                 } else if (device.startsWith('wl')) {
                     updateData.waterLevel = waterLevel
                     console.log("water level updated: ",waterLevel);
-                    if(tankDepth && maxWaterLevel){
-                        updateData.tankDepth=tankDepth;
+                    if(depth && maxHeight){
+                        updateData.tankDepth=depth;
                     updateData.tankLength=tankLength;
                     updateData.tankWidth=tankWidth;
                     const changeState = await User.findOneAndUpdate(
                         { name: user, 'devices.name': device },
-                        { $set: { 'devices.$.tankDepth': tankDepth,
+                        { $set: { 'devices.$.tankDepth': depth,
                             'devices.$.tankLength': tankLength,
                             'devices.$.tankWidth': tankWidth,
-                            'devices.$.maxWaterLevel': maxWaterLevel,
+                            'devices.$.maxWaterLevel': maxHeight,
                          } },  // Update the matched device in the array
                         { new: true }
                     );
