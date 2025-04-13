@@ -290,7 +290,7 @@ db.once('open', async function(){
                 console.log("error in patch /ac route: ",error)
             }
         });
-        app.post('/ac', async(req, res) => {
+        app.put('/ac', async(req, res) => {
             try {
                 const {acName}=req.body
                 console.log(acName)
@@ -615,9 +615,7 @@ db.once('open', async function(){
         
         
 
-        app.get('/louam/ac10000', async(req, res) => {
-            res.json({ ledState: true });
-        });
+        
     } catch (error) {
         console.error(error);
     }
