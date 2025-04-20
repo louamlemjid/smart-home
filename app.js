@@ -398,7 +398,7 @@ db.once('open', async function(){
                 const user = await User.findOne({ name: userName, devices: { $elemMatch: { name: deviceName } } });
                 if(!user){
                     const addDevice = await User.updateOne({ name: userName },
-                        { $push: { devices: { name: deviceName, state: false,waterLevel:0 } } }
+                        { $push: { devices: { name: deviceName, state: false,waterLevel:0,switchOffTime:60 } } }
                     );
                     console.log(addDevice);
                     res.status(200).send(addDevice);
@@ -466,7 +466,7 @@ db.once('open', async function(){
         app.post('/:user/:device', async (req, res) => {
             try {
                 const { device, user } = req.params;
-                let { state, temperature,fanSpeed, mode, duration, startTime, 
+                let { state, temperature,fanSpeed, mode, duration, startTime,switchOffTime ,
                     endTime, waterLevel,depth,tankLength,tankWidth,maxHeight,lastUpdate } = req.body;
                     console.log("remote devices data:",req.body);
                 // waterLevel=sensorReadingToDepth(waterLevel);
@@ -485,6 +485,7 @@ db.once('open', async function(){
                     updateData.temperature = temperature;
                     updateData.mode = mode;
                     updateData.fanSpeed = fanSpeed;
+                    updateData.switchOffTime = switchOffTime;
                     const changeState = await User.findOneAndUpdate(
                     { name: user, 'devices.name': device },
                     { $set: { 'devices.$': updateData } },  // Update the matched device in the array

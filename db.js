@@ -65,6 +65,7 @@ const userschema= new mongoose.Schema({
             maxWaterLevel:Number,
             minWaterLevel:Number,
             lastUpdate:Date,
+            switchOffTime:number,
         }
     ]
 });
