@@ -108,7 +108,7 @@ db.once('open', async function(){
                 // autoFan:{"16":"none","17":"none","18":"0x8808350","19":"0x8808451","20":"8808552","21":"8808653","22":"8808754","23":"8808855","24":"8808956","25":"8808A57","26":"8808B58","27":"8808C59","28":"8808D5A","29":"8808E5B","30":"8808F5C"}}
                 // ,heat:{autoFan:{"low":"880B454","medium":"880B252","high":"880B050"}},fan:{"low":"880A30D","medium":"880A32F","high":"880A341"},dry:{autoFan:"8809856"}});
         // Routes
-          const newHV = await User.insertMany
+          
         // Create WebSocket server on port 8080
         
         // Set up an SSE route
