@@ -6,6 +6,8 @@ const mongoose=require('mongoose');
 const { name } = require('ejs');
 const app = express();
 const PORT = 1000;
+const dotenv = require('dotenv');
+dotenv.config();
 const cron = require('node-cron');
 const WebSocket = require('ws');
 const server = http.createServer(app);
@@ -72,7 +74,7 @@ async function updateDeviceState(user, device, newState) {
         console.error(`Failed to update device state: ${error}`);
     }
 }
-mongoose.connect('mongodb+srv://louam-lemjid:8hAgfKf2ZDauLxoj@cluster0.mjqmopn.mongodb.net/smartHome', { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect(process.env.DATABASE_URI, { useNewUrlParser: true, useUnifiedTopology: true });
 
 
 

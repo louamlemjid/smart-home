@@ -3,7 +3,7 @@ const app = require('./app');
 const mongoose = require('mongoose');
 
 beforeEach(async () => {
-    await mongoose.connect('mongodb+srv://louam-lemjid:8hAgfKf2ZDauLxoj@cluster0.mjqmopn.mongodb.net/smartHome');
+    await mongoose.connect(process.env.DATABASE_URI);
   });
   
   /* Closing database connection after each test. */
