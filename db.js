@@ -55,8 +55,14 @@ const userschema= new mongoose.Schema({
             temperature:Number,
             mode:String,
             fanSpeed:String,
-            startTime:Date,
-            endTime:Date,
+            startTime:{
+                hour:Number,
+                minute:Number
+            },
+            endTime:{
+                hour:Number,
+                minute:Number
+            },
             duration:Number,
             waterLevel:Number,
             tankLength:Number,
@@ -66,6 +72,7 @@ const userschema= new mongoose.Schema({
             minWaterLevel:Number,
             lastUpdate:Date,
             switchOffTime:Number,
+            linkedWaterLevelDevice:String,
         }
     ]
 });

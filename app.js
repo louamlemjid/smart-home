@@ -17,7 +17,8 @@ let clients={}
 const addNewAc = require('./controllers/crudAc/addNewAc');
 const updateAc = require('./controllers/crudAc/updateAc');
 const getAcNames=require('./controllers/crudAc/getAcNames')
-const getAcRowData=require('./controllers/crudAc/getAcRowData')
+const getAcRowData=require('./controllers/crudAc/getAcRowData');
+const { error } = require('console');
 
 // Helper function to convert minutes to cron syntax
 function convertMinutesToCron(minutes) {
@@ -105,7 +106,7 @@ db.once('open', async function(){
                 // autoFan:{"16":"none","17":"none","18":"0x8808350","19":"0x8808451","20":"8808552","21":"8808653","22":"8808754","23":"8808855","24":"8808956","25":"8808A57","26":"8808B58","27":"8808C59","28":"8808D5A","29":"8808E5B","30":"8808F5C"}}
                 // ,heat:{autoFan:{"low":"880B454","medium":"880B252","high":"880B050"}},fan:{"low":"880A30D","medium":"880A32F","high":"880A341"},dry:{autoFan:"8809856"}});
         // Routes
-
+          const newHV = await User.insertMany
         // Create WebSocket server on port 8080
         
         // Set up an SSE route
@@ -393,12 +394,21 @@ db.once('open', async function(){
             try {
               const userName = req.params.user;
               const deviceName = req.body.name;
-          
+
               // Find the user
                 const user = await User.findOne({ name: userName, devices: { $elemMatch: { name: deviceName } } });
                 if(!user){
                     const addDevice = await User.updateOne({ name: userName },
-                        { $push: { devices: { name: deviceName, state: false,waterLevel:0,switchOffTime:60 } } }
+                        { $push: { devices: { name: deviceName, state: false,waterLevel:0,switchOffTime:60,
+                            startTime:{
+                                hour:0,
+                                minute:0
+                            },
+                            endTime:{
+                                hour:23,
+                                minute:0
+                            } } } 
+                        }
                     );
                     console.log(addDevice);
                     res.status(200).send(addDevice);
@@ -463,17 +473,90 @@ db.once('open', async function(){
                 res.status(400).json({error:error});
             }
         })
+        app.get('/hv/:user/:device', async (req, res) => {
+            try {
+            const user = await User.findOneAndUpdate({ name: req.params.user },
+                { $set: { 'devices.$[elem].lastUpdate': new Date() } },
+                { arrayFilters: [{ 'elem.name': req.params.device }] }
+            );
+
+            if (!user) {
+                res.status(404).json({error:'User not found'});
+            }
+            const devices = user?.devices;
+            console.log("devices hv route: ",devices);
+
+            const device = devices.find(d => d.name === req.params.device);
+            if (!device) {
+                res.status(404).json({error:'Device not found'});
+            }
+            console.log("device hv route: ",device);
+
+            const state = device?.state ? 'on' : 'off';
+            var insideInterval = 'yes';
+            if(device.endTime && device.startTime){
+                const currentTime = new Date();
+                
+                const startTime = new Date(currentTime.getFullYear()
+                ,currentTime.getMonth(),
+                currentTime.getDate(),
+                device.startTime?.hour || 0,
+                device.startTime?.minute || 0);
+
+                const endTime = new Date(
+                    currentTime.getFullYear(),
+                    currentTime.getMonth(),
+                    currentTime.getDate(),
+                    device.endTime?.hour || 22,
+                    device.endTime?.minute || 0
+                );
+                if(device.endTime.hour*24+device.endTime.minute < device.startTime.hour*24 + device.startTime.minute){
+                    endTime.setDate(endTime.getDate() + 1);
+                    console.log("end time is set to next day");
+                }
+                if (currentTime >= startTime && currentTime <= endTime) {
+                    insideInterval = 'yes';
+                } else {    
+                    insideInterval = 'no';
+                }
+            }
+            if(device?.linkedWaterLevelDevice)
+                {
+                    const linkedDevice = devices.find(d => d.name === device.linkedWaterLevelDevice);
+                    if (!linkedDevice) {
+                        res.status(206).json({error:'Linked water level device not found',
+                            state:state,
+                            insideInterval: insideInterval
+                        });
+                    }
+                    res.status(200).json({
+                        state: state,
+                        waterLevel: linkedDevice.waterLevel,
+                        insideInterval: insideInterval,
+                    })
+                }
+                else{
+                    res.status(206).json({error:'Water level device not linked',
+                        state:state,
+                        insideInterval: insideInterval
+                    });
+                }
+            } catch (error) {
+            res.status(400).send(error);
+            }
+
+        })
         app.post('/:user/:device', async (req, res) => {
             try {
                 const { device, user } = req.params;
-                let { state, temperature,fanSpeed, mode, duration, startTime,switchOffTime ,
+                let { state, temperature,fanSpeed, mode, linkedWaterLevelDevice, startTime,switchOffTime ,
                     endTime, waterLevel,depth,tankLength,tankWidth,maxHeight,lastUpdate } = req.body;
                     console.log("remote devices data:",req.body);
                 // waterLevel=sensorReadingToDepth(waterLevel);
-                let AmplifiedDuration=duration*2;
-                if(AmplifiedDuration==60){
-                    AmplifiedDuration=59;
-                }
+                // let AmplifiedDuration=duration*2;
+                // if(AmplifiedDuration==60){
+                //     AmplifiedDuration=59;
+                // }
                 let updateData = {
                     name: device,
                     state: state,
@@ -494,16 +577,30 @@ db.once('open', async function(){
                     console.log(changeState);
                     res.status(200).send(changeState);
                 } else if (device.startsWith('hv')) {
-                    updateData.duration = duration;
-                    updateData.startTime = startTime;
-                    updateData.endTime = endTime;
-                    const changeState = await User.findOneAndUpdate(
-                    { name: user, 'devices.name': device },
-                    { $set: { 'devices.$': updateData } },  // Update the matched device in the array
-                    { new: true }
-                );
-                    console.log(changeState);
-                    res.status(200).send(changeState);
+                    if(linkedWaterLevelDevice){
+                        updateData.linkedWaterLevelDevice = linkedWaterLevelDevice;
+                    }
+                   if(startTime && endTime ){
+                        updateData.startTime = startTime;
+                        updateData.endTime = endTime;
+                        const configuration = await User.findOneAndUpdate(
+                            { name: user, 'devices.name': device },
+                            { $set: { 'devices.$': updateData } },  // Update the matched device in the array
+                            { new: true }
+                        );
+                        console.log("update from app: ",configuration);
+                        res.status(200).send(configuration);
+                    }else{
+                        const stateChange = await User.findOneAndUpdate(
+                            { name: user, 'devices.name': device },
+                            { $set: { 'devices.$.state': state,
+                                'devices.$.lastUpdate':new Date()
+                             } },  // Update the matched device in the array
+                            { new: true }
+                        );
+                        console.log("update from device:",stateChange);
+                        res.status(200).send(stateChange);
+                    }
                 } else if (device.startsWith('wl')) {
                     updateData.waterLevel = waterLevel
                     console.log("water level updated: ",waterLevel);
@@ -548,63 +645,66 @@ db.once('open', async function(){
                 //     { $set: { 'devices.$': updateData } },  // Update the matched device in the array
                 //     { new: true }
                 // );
-                if (activeJobs[device]) {
-                    activeJobs[device].forEach(job => job.stop());
-                }
-                function sequence(duration){
-                    let ch=""
-                    for (let i=duration;i<60;i+=duration*2){
-                        ch+=`${i},`
-                    }
-                    console.log(ch.slice(0,-1));
-                    return ch.slice(0,-1);
-                }
-                if (startTime && endTime && duration) {
-                    // Convert startTime and endTime to Date objects if they're not already
-                    const start = new Date(startTime);
-                    const end = new Date(endTime);
+
+                // if (activeJobs[device]) {
+                //     activeJobs[device].forEach(job => job.stop());
+                // }
+
+                // function sequence(duration){
+                //     let ch=""
+                //     for (let i=duration;i<60;i+=duration*2){
+                //         ch+=`${i},`
+                //     }
+                //     console.log(ch.slice(0,-1));
+                //     return ch.slice(0,-1);
+                // }
+
+                // if (startTime && endTime && duration) {
+                //     // Convert startTime and endTime to Date objects if they're not already
+                //     const start = new Date(startTime);
+                //     const end = new Date(endTime);
         
-                    const xDuration = duration * 60 * 1000; // Convert duration from minutes to milliseconds
+                //     const xDuration = duration * 60 * 1000; // Convert duration from minutes to milliseconds
         
-                    // Schedule the initial ON job at startTime
-                    let onJob = cron.schedule(`${start.getMinutes()} ${start.getHours()} * * *`, async () => {
-                        console.log(`Device ${device} initial ON at start time.`);
-                        await updateDeviceState(user, device, true); // Turn device ON
+                //     // Schedule the initial ON job at startTime
+                //     let onJob = cron.schedule(`${start.getMinutes()} ${start.getHours()} * * *`, async () => {
+                //         console.log(`Device ${device} initial ON at start time.`);
+                //         await updateDeviceState(user, device, true); // Turn device ON
         
-                        // Start setInterval to toggle the device ON and OFF for xDuration
-                        let toggleInterval = setInterval(async () => {
-                            await updateDeviceState(user, device, true); // Turn device ON
-                            console.log('Device turned ON');
+                //         // Start setInterval to toggle the device ON and OFF for xDuration
+                //         let toggleInterval = setInterval(async () => {
+                //             await updateDeviceState(user, device, true); // Turn device ON
+                //             console.log('Device turned ON');
         
-                            // Turn device OFF after xDuration
-                            setTimeout(async () => {
-                                await updateDeviceState(user, device, false); // Turn device OFF
-                                console.log('Device turned OFF');
-                            }, xDuration);
+                //             // Turn device OFF after xDuration
+                //             setTimeout(async () => {
+                //                 await updateDeviceState(user, device, false); // Turn device OFF
+                //                 console.log('Device turned OFF');
+                //             }, xDuration);
         
-                        }, xDuration * 2); // Run every xDuration * 2 (ON for xDuration, OFF for xDuration)
+                //         }, xDuration * 2); // Run every xDuration * 2 (ON for xDuration, OFF for xDuration)
         
-                        // Store the interval for cleanup later
-                        activeJobs[device].push({ interval: toggleInterval });
+                //         // Store the interval for cleanup later
+                //         activeJobs[device].push({ interval: toggleInterval });
         
-                    });
+                //     });
         
-                    // Schedule the final OFF job at endTime
-                    let offJob = cron.schedule(`${end.getMinutes()} ${end.getHours()} * * *`, async () => {
-                        console.log(`Device ${device} OFF at end time.`);
+                //     // Schedule the final OFF job at endTime
+                //     let offJob = cron.schedule(`${end.getMinutes()} ${end.getHours()} * * *`, async () => {
+                //         console.log(`Device ${device} OFF at end time.`);
                         
-                        // Turn off device and clear interval
-                        await updateDeviceState(user, device, false); // Turn device OFF
+                //         // Turn off device and clear interval
+                //         await updateDeviceState(user, device, false); // Turn device OFF
                         
-                        // Clear the interval to stop toggling
-                        if (activeJobs[device]) {
-                            activeJobs[device].forEach(job => clearInterval(job.interval));
-                        }
-                    });
+                //         // Clear the interval to stop toggling
+                //         if (activeJobs[device]) {
+                //             activeJobs[device].forEach(job => clearInterval(job.interval));
+                //         }
+                //     });
         
-                    // Store active cron jobs for the device
-                    activeJobs[device] = [{ cron: onJob }, { cron: offJob }];
-                }
+                //     // Store active cron jobs for the device
+                //     activeJobs[device] = [{ cron: onJob }, { cron: offJob }];
+                // }
         
                 
         
