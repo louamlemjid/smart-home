@@ -477,81 +477,83 @@ db.once('open', async function(){
         })
         app.get('/hv/:user/:device', async (req, res) => {
             try {
-            const user = await User.findOneAndUpdate({ name: req.params.user },
-                { $set: { 'devices.$[elem].lastUpdate': new Date() } },
-                { arrayFilters: [{ 'elem.name': req.params.device }] }
-            );
-
-            if (!user) {
-                res.status(404).json({error:'User not found'});
-            }
-            const devices = user?.devices;
-            console.log("devices hv route: ",devices);
-
-            const device = devices.find(d => d.name === req.params.device);
-            if (!device) {
-                res.status(404).json({error:'Device not found'});
-            }
-            console.log("device hv route: ",device);
-
-            const state = device?.state ? 'on' : 'off';
-            var insideInterval = 'yes';
-            if(device.endTime && device.startTime){
-                const currentTime = new Date();
-                
-                const startTime = new Date(currentTime.getFullYear()
-                ,currentTime.getMonth(),
-                currentTime.getDate(),
-                device.startTime?.hour || 0,
-                device.startTime?.minute || 0);
-
-                const endTime = new Date(
-                    currentTime.getFullYear(),
-                    currentTime.getMonth(),
-                    currentTime.getDate(),
-                    device.endTime?.hour || 22,
-                    device.endTime?.minute || 0
+                const user = await User.findOneAndUpdate(
+                    { name: req.params.user },
+                    { $set: { 'devices.$[elem].lastUpdate': new Date() } },
+                    { arrayFilters: [{ 'elem.name': req.params.device }] }
                 );
-                if(device.endTime.hour*24+device.endTime.minute < device.startTime.hour*24 + device.startTime.minute){
-                    endTime.setDate(endTime.getDate() + 1);
-                    console.log("end time is set to next day");
+
+                if (!user) {
+                    return res.status(404).json({ error: 'User not found' });
                 }
-                if (currentTime >= startTime && currentTime <= endTime) {
-                    insideInterval = 'yes';
-                } else {    
-                    insideInterval = 'no';
+
+                const devices = user.devices;
+                console.log("devices hv route: ", devices);
+
+                const device = devices.find(d => d.name === req.params.device);
+                if (!device) {
+                    return res.status(404).json({ error: 'Device not found' });
                 }
-            }
-            if(device?.linkedWaterLevelDevice)
-                {
+                console.log("device hv route: ", device);
+
+                const state = device.state ? 'on' : 'off';
+                let insideInterval = 'yes';
+                if (device.endTime && device.startTime) {
+                    const currentTime = new Date();
+                    
+                    const startTime = new Date(
+                        currentTime.getFullYear(),
+                        currentTime.getMonth(),
+                        currentTime.getDate(),
+                        device.startTime?.hour || 0,
+                        device.startTime?.minute || 0
+                    );
+
+                    const endTime = new Date(
+                        currentTime.getFullYear(),
+                        currentTime.getMonth(),
+                        currentTime.getDate(),
+                        device.endTime?.hour || 22,
+                        device.endTime?.minute || 0
+                    );
+
+                    if (device.endTime.hour * 24 + device.endTime.minute < device.startTime.hour * 24 + device.startTime.minute) {
+                        endTime.setDate(endTime.getDate() + 1);
+                        console.log("end time is set to next day");
+                    }
+
+                    insideInterval = (currentTime >= startTime && currentTime <= endTime) ? 'yes' : 'no';
+                }
+
+                if (device.linkedWaterLevelDevice) {
                     const linkedDevice = devices.find(d => d.name === device.linkedWaterLevelDevice);
                     if (!linkedDevice) {
-                        res.status(206).json({error:'Linked water level device not found',
-                            state:state,
+                        return res.status(206).json({
+                            error: 'Linked water level device not found',
+                            state: state,
                             insideInterval: insideInterval
                         });
                     }
-                    const realWaterLevel = linkedDevice.maxWaterLevel - linkedDevice.waterLevel
-                    const ratio = Math.floor((realWaterLevel / linkedDevice.maxWaterLevel) * 100)
 
+                    const realWaterLevel = linkedDevice.maxWaterLevel - linkedDevice.waterLevel;
+                    const ratio = Math.floor((realWaterLevel / linkedDevice.maxWaterLevel) * 100);
 
-                    res.status(200).json({
+                    return res.status(200).json({
                         state: state,
                         waterLevel: ratio,
-                        insideInterval: insideInterval,
-                    })
-                }
-                else{
-                    res.status(206).json({error:'Water level device not linked',
-                        state:state,
+                        insideInterval: insideInterval
+                    });
+                } else {
+                    return res.status(206).json({
+                        error: 'Water level device not linked',
+                        state: state,
                         insideInterval: insideInterval
                     });
                 }
             } catch (error) {
-            res.status(400).send(error);
+                return res.status(400).json({ error: error.message });
             }
-
-        })
+        });
         app.post('/:user/:device', async (req, res) => {
             try {
                 const { device, user } = req.params;
