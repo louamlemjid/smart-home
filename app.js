@@ -531,9 +531,13 @@ db.once('open', async function(){
                             insideInterval: insideInterval
                         });
                     }
+                    const realWaterLevel = linkedDevice.maxWaterLevel - linkedDevice.waterLevel
+                    const ratio = Math.floor((realWaterLevel / linkedDevice.maxWaterLevel) * 100)
+
+
                     res.status(200).json({
                         state: state,
-                        waterLevel: linkedDevice.waterLevel,
+                        waterLevel: ratio,
                         insideInterval: insideInterval,
                     })
                 }
