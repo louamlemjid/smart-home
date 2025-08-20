@@ -535,7 +535,7 @@ db.once('open', async function(){
                         });
                     }
 
-                    const realWaterLevel = linkedDevice.maxWaterLevel - linkedDevice.waterLevel;
+                    const realWaterLevel = linkedDevice.tankDepth - linkedDevice.waterLevel;
                     const ratio = Math.floor((realWaterLevel / linkedDevice.maxWaterLevel) * 100);
 
                     return res.status(200).json({
