@@ -73,6 +73,7 @@ const userschema= new mongoose.Schema({
             lastUpdate:Date,
             switchOffTime:Number,
             linkedWaterLevelDevice:String,
+            humidity:Number
         }
     ]
 });
