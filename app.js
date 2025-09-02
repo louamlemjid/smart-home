@@ -560,6 +560,7 @@ db.once('open', async function(){
                 let { state, temperature,fanSpeed, mode, linkedWaterLevelDevice, startTime,switchOffTime ,
                     endTime, waterLevel,depth,tankLength,tankWidth,maxHeight,lastUpdate,humidity } = req.body;
                     console.log("remote devices data:",req.body);
+                    console.log("user,device: ",req.params);
                 // waterLevel=sensorReadingToDepth(waterLevel);
                 // let AmplifiedDuration=duration*2;
                 // if(AmplifiedDuration==60){
@@ -639,8 +640,7 @@ db.once('open', async function(){
                     
                 } else if (device.startsWith('hum')) {
                     console.log("humidity updated: ",humidity);
-                    if(humidity){
-                        
+                    
                         const changeState = await User.findOneAndUpdate(
                             { name: user, 'devices.name': device },
                             { $set: { 'devices.$.humidity': humidity,
@@ -650,7 +650,6 @@ db.once('open', async function(){
                         );
                             console.log(changeState);
                             res.status(200).send(changeState);
-                    }
 
                     
                 } else if(device.startsWith('led')){
