@@ -255,7 +255,36 @@ db.once('open', async function(){
                     clients[userId].send(JSON.stringify({"updatedWaterLevel":updatedWaterLevel,"updatedDevices":updatedDevices}));
                 }
             });
-                
+               //humidity watcher
+            User.watch([
+                {
+                  $match: {
+                    "operationType": "update",
+                    // Match updates where only the waterLevel field in the devices array is updated
+                    $expr: {
+                      $anyElementTrue: {
+                        $map: {
+                          input: { $objectToArray: "$updateDescription.updatedFields" },
+                          as: "field",
+                          in: { $regexMatch: { input: "$$field.k", regex: /^devices\.\d+\.humidity$/ } }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]).on('change', async(change) => {
+                console.log("Change detected in waterLevel: ", change.updateDescription.updatedFields);
+                const { documentKey, updateDescription } = change;
+                const userId = documentKey._id.toHexString();
+                console.log("userId: ",userId);
+
+                const updatedHumidity = Object.values(updateDescription.updatedFields)[0]
+                if(clients[userId]){
+                    console.log("la longueur de l'objet est: ",Object.keys(clients).length);
+                    let updatedDevices=await User.findOne({_id:userId});
+                    clients[userId].send(JSON.stringify({"updatedHumidity":updatedHumidity,"updatedDevices":updatedDevices}));
+                }
+            }); 
               
             User.watch([
                 {
