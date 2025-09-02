@@ -401,7 +401,7 @@ db.once('open', async function(){
                 const user = await User.findOne({ name: userName, devices: { $elemMatch: { name: deviceName } } });
                 if(!user){
                     const addDevice = await User.updateOne({ name: userName },
-                        { $push: { devices: { name: deviceName, state: false,waterLevel:0,switchOffTime:60,
+                        { $push: { devices: { name: deviceName, state: false,waterLevel:0,switchOffTime:60,humidity:0,
                             startTime:{
                                 hour:0,
                                 minute:0
